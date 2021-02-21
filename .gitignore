@@ -130,3 +130,6 @@ dmypy.json
 assets/.DS_Store
 .gitignore
 assets/images/.DS_Store
+.DS_Store
+.vscode/settings.json
+gamecore/assets/.DS_Store

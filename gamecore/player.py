@@ -1,3 +1,7 @@
+#=====================================================================
+# Classes
+#=====================================================================
+
 class Player:
     """
     Player has 2 attributes: name, xxx
@@ -18,7 +22,7 @@ class Player:
         name: str = None
     ):
         """
-        Function that creates an instance of Player class
+        Function to create an instance of Player class
         By default:
         * name is "player_1", then "player_2" if no name is provided
         """
@@ -30,19 +34,27 @@ class Player:
 
         Player.players_list.append(self)
 
-
-    ##### Test:
     def __repr__(self):
         """
-        In order to print the player instance in the specified format
+        In order to print the Player instance in the specified format
         """
-        return f"Player({self.name})"
+        return f"{self.name}"
+
+
+#============================================================
+# Main functions
+#============================================================
 
 def main():
-    p1 = Player('Yoyo')
-    p2 = Player()
-    print(p1)
-    print(p2)
+    player_1 = Player('Yoyo')
+    player_2 = Player()
+    print(player_1)
+    print(player_2)
+
+
+#============================================================
+# Run
+#============================================================
 
 ## if you directly run this program, main() fct will create 2 player instances and print them
 if __name__ == '__main__':

@@ -71,7 +71,6 @@ Enter-the-pygame
 │
 └───gamecore                :directory contains the game logic and the entities (classes such as Player, AI, Monsters, Obstacles,...)
 │   │   __init__.py
-│   │   main.py             :execute the game logic with pygame module
 │   │
 │   └───assets              :contains the media used in the game
 │       ├───fonts

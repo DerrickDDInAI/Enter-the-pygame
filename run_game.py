@@ -9,6 +9,7 @@ Game to demonstrate how:
 
 ## Import internal modules
 import sys
+import os.path
 from typing import List, Set, Dict, TypedDict, Tuple, Optional
 
 ## Import 3rd party modules
@@ -17,7 +18,7 @@ from pygame.color import THECOLORS
 
 
 ## Import local modules
-from gamecore.player import Player
+from gamecore.player import Player, Gorilla
 from gamecore.level import Level
 
 
@@ -202,6 +203,11 @@ def main() -> None:
 
     # Instantiate local client who will control player_1
     client_1 = Client(player_1)
+
+    # Instantiate gorilla
+    gorilla = Gorilla("./assets/images/gorilla.png", (current_window_size))
+    gorilla.image = pygame.image.load(os.path.join("assets","images","gorilla.png")).convert_alpha()
+
     
     # Start screen
     levels_list = create_levels()
@@ -216,12 +222,14 @@ def main() -> None:
             current_start_event += 1
 
         if current_start_event == 1:
-            game_window.screen.fill((22,35,46))
+            # game_window.screen.fill((22,35,46))
+            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
         elif current_start_event == 2:
             game_window.screen.fill((255,0,0))
         elif current_start_event == 3:
-            game_window.screen.fill((255,255,255))
-
+            # game_window.screen.fill((255,255,255))
+            # gorilla.image = pygame.transform.flip(gorilla.image, True, False) # flip the gorilla horizontally # this will make the gorilla flips at each frame (-> find solution)
+            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
         pygame.display.update() # Update the screen with the drawings
 
 

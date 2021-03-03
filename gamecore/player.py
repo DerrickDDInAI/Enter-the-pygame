@@ -57,6 +57,9 @@ class Player:
         In order to print the Player instance in the specified format
         """
         return f"{self.name}"
+    
+    def move():
+        pass
 
 class AIBots(Player):
     """
@@ -109,7 +112,7 @@ class AIBots(Player):
         AIBots.aibots_list.append(self)
 
 
-class Gorilla:
+class Gorilla(Player):
     """
     Gorilla class
     """
@@ -122,6 +125,7 @@ class Gorilla:
         Function to create an instance of Gorilla class
         """
         self.image_path = image_path
+        self.image = None
         self.x: int
         self.y: int
         self.x, self.y = xy_pos
@@ -146,7 +150,7 @@ class Gorilla:
             "You're wrong.", # 1
             "You're already in the game.", # 2
             "You've always been in the game!", # 3
-            "My name is Mastro Gorilla.", # 4
+            "My name is Maestro Gorilla.", # 4
             "I am a being from another dimension.", # 5
             "29 years ago in human time, I created my designer so that he could draw me.", # 6
             "From my dimension, we can see your past, present and all possible futures.", # 7

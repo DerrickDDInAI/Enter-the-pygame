@@ -50,6 +50,85 @@ class GameWindow:
         pygame.display.set_caption(self.caption)
 
 
+class Client:
+    """
+    Client 
+    """
+    def __init__(self, player):
+        """
+        Function to create an instance of Client class
+        """
+        self.player = player
+    
+    def get_user_input(self) -> dict:
+        """
+        Function to get user input
+        """
+
+        for event in pygame.event.get():
+
+            # Check keys released for one instant
+            if event.type == pygame.KEYUP:
+                # Quit the game if you release the escape button
+                if event.key == pygame.K_ESCAPE:
+                    terminate()
+
+            # Quit the game if you click on the X button at the top of the screen
+            if event.type == pygame.QUIT:
+                terminate()
+
+            # Check keys pressed for one instant
+            if event.type == pygame.KEYDOWN:
+                # Accelerate player if space bar is pressed and boost available
+                if event.key == pygame.K_SPACE: # and player.boost == 5.0:
+                    pass
+
+            # Check keys continuously pressed
+            keys = pygame.key.get_pressed()
+
+            if keys[pygame.K_LEFT]:
+                pass # move player left
+            if keys[pygame.K_RIGHT]:
+                pass # move player right
+            if keys[pygame.K_UP]:
+                pass # move player up
+            if keys[pygame.K_DOWN]:
+                pass # move player down
+                
+            # Resize the display
+            if event.type == pygame.VIDEORESIZE:
+                game_window.screen = pygame.display.set_mode(
+                    event.dict['size'], pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE)
+                return event.dict['size']
+                # game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, event.dict['size']), (0,0))
+                # pygame.display.flip()
+    
+    def wait_for_pressed_key(self) -> bool:
+        """
+        Function to check if any key is pressed
+        """
+        for event in pygame.event.get():
+
+            # Check keys released for one instant
+            if event.type == pygame.KEYUP:
+                # Quit the game if you release the escape button
+                if event.key == pygame.K_ESCAPE:
+                    terminate()
+
+            # Quit the game if you click on the X button at the top of the screen
+            if event.type == pygame.QUIT:
+                terminate()
+            
+            # Resize the display
+            if event.type == pygame.VIDEORESIZE:
+                game_window.screen = pygame.display.set_mode(
+                    event.dict['size'], pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE)
+                return event.dict['size']
+                # game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, event.dict['size']), (0,0))
+                # pygame.display.flip()
+
+            if event.type == pygame.KEYDOWN:
+                return True
 #============================================================
 # Main functions
 #============================================================
@@ -65,8 +144,6 @@ def create_levels() -> List:
 
     # 2. Import the background image
     ## convert() is not necessary but converts the image into a format easier for pygame => faster
-    print(title_slide)
-    print(title_slide.bg_surface_path)
     title_slide.bg_surface = pygame.image.load(title_slide.bg_surface_path).convert()
 
     ## 3. If necessary, resize the background image
@@ -81,31 +158,6 @@ def terminate() -> None:
     pygame.quit()
     sys.exit()
 
-def get_user_input(levels_list, current_level_index) -> None:
-    """
-    Function to get each user input
-    :parameters levels_list and current_level_index to allow the user to resize the screen
-    """
-    for event in pygame.event.get():
-
-        # Quit the game if you click on the X button at the top of the screen
-        if event.type == pygame.QUIT:
-            running = False
-            terminate()
-
-        # Quit the game if you release the escape button
-        elif event.type == pygame.KEYUP:
-            if event.key == pygame.K_ESCAPE:
-                running = False
-                terminate()
-        
-        # Resize the display
-        elif event.type == pygame.VIDEORESIZE:
-            game_window.screen = pygame.display.set_mode(
-                event.dict['size'], pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE)
-            game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, event.dict['size']), (0,0))
-            pygame.display.flip()
-        
 def get_ai_decision():
     pass
 
@@ -130,36 +182,75 @@ def main() -> None:
     # Display
     game_window = GameWindow((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), CAPTION)
     game_window.display_caption()
+
+    # Clock
+    main_clock = pygame.time.Clock() # instantiate clock to limit the frame rate
+
+    # Variables
+    start_screen = True # start screen loop
+    game_running = True # game loop 
+    framerate_limit = 120
+    time_s = 0.0
+    current_level_index = 0
+    current_start_event = 0 # events happen at the start screen (event 0: just title slide; event 1: gorilla appears; event 2,3,...: dialogue; last event: gorilla disappears and game starts)
+    current_window_size = (game_window.width_px,game_window.height_px)
+    # # Create empty dictionary that will store user input when necessary
+    # input_dict: dict = {"size": None, "level": 0} 
+
+    # Instantiate player
+    player_1 = Player(20, (1,1),'Yoyo', (255,0,0))
+
+    # Instantiate local client who will control player_1
+    client_1 = Client(player_1)
+    
+    # Start screen
     levels_list = create_levels()
+    while start_screen:
+        user_input = client_1.wait_for_pressed_key()
+        # if user_input is a tuple, it means the user changed the screen size
+        if isinstance(user_input,tuple):
+            current_window_size = user_input
+        game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, current_window_size), (0,0))
+
+        if user_input == True:
+            current_start_event += 1
+
+        if current_start_event == 1:
+            game_window.screen.fill((22,35,46))
+        elif current_start_event == 2:
+            game_window.screen.fill((255,0,0))
+        elif current_start_event == 3:
+            game_window.screen.fill((255,255,255))
+
+        pygame.display.update() # Update the screen with the drawings
+
+
+    
+
+
     ## Fill the window with BeCode color
     # game_window.screen.fill((22,35,46))
     # game_window.screen.fill(THECOLORS['black'])
     # pygame.display.update()
 
 
-    # Clock
-    main_clock = pygame.time.Clock() # instantiate clock to limit the frame rate
-
-    # Variables
-    running = True # game loop 
-    framerate_limit = 120
-    time_s = 0.0
-    current_level_index = 0
-
-
-    while running:
+    while game_running:
         # Get the delta t for one frame (this changes depending on system load).
         dt_s = float(main_clock.tick(framerate_limit) * 1e-3)
 
         # Get user input
-        get_user_input(levels_list,current_level_index)
+        user_input = client_1.get_user_input()
         get_ai_decision()
         
         # Display background
         ## Display level 1 background surface
         ## blit() to display a surface on another surface: here to display level surface on screen
         ## (0,0): the position of the top left of bg_surface
-        game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0)) 
+        # if user_input is a tuple, it means the user changed the screen size
+        if isinstance(user_input,tuple):
+            current_window_size = user_input
+        game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, current_window_size), (0,0))
+        # game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0)) 
         
         # Update the screen with the drawings
         pygame.display.update()

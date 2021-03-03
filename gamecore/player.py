@@ -126,18 +126,16 @@ class Gorilla(Player):
         """
         self.image_path = image_path
         self.image = None
+        self.image_flip = None # will contain the horizontally flipped image of the gorilla
         self.x: int
         self.y: int
         self.x, self.y = xy_pos
     
-    def talk(self, line_nb: int):
         """
-        Function to make the Gorilla talk
-
         My lines:
         1. "Let's dive into the game!"
-        4. "Whaat! Wait... who are you?"
-        5. "Another dimension? You created your designer?"
+        4. "Whaat? Who's there?"
+        7. "Another dimension? You created your designer?"
            "You waited for 29 years that he draws you like this ?!
            "Sorry to say but you're not exactly a picasso!"
            "Wait, that's not what is important. Why are you here?"
@@ -146,7 +144,7 @@ class Gorilla(Player):
             " What does that mean? Train myself? In what? And for what?"
             "What a very strange gorilla... Well, let's play, maybe I'll find more information.
         """
-        lines = [
+        self.dialogues = [
             "You're wrong.", # 1
             "You're already in the game.", # 2
             "You've always been in the game!", # 3
@@ -154,15 +152,12 @@ class Gorilla(Player):
             "I am a being from another dimension.", # 5
             "29 years ago in human time, I created my designer so that he could draw me.", # 6
             "From my dimension, we can see your past, present and all possible futures.", # 7
-            "What we... what I saw in the chain of possibilities is a convergence." # 8
-            "Something that must never happen!" # 9
-            "However, I can't tell you more than that." # 10
-            "You're not ready... yet." # 11
-            "What I can tell you is to train yourself!"
-        ]
-        return lines[line_nb]
-        
-
+            "What we... what I saw in the chain of possibilities is a convergence.", # 8
+            "Something that must never happen!", # 9
+            "However, I can't tell you more than that.", # 10
+            "You're not ready... yet.", # 11
+            "What I can tell you is to train yourself!" # 12
+            ]
 
 #============================================================
 # Main functions

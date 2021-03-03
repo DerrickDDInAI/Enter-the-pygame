@@ -141,7 +141,7 @@ def create_levels() -> List:
     """
     
     # 1. Create Level instances
-    title_slide = Level("Title", "slide", "./assets/images/title_slide.png")
+    title_slide = Level("Title", "slide", "gamecore/assets/images/title_slide.png")
 
     # 2. Import the background image
     ## convert() is not necessary but converts the image into a format easier for pygame => faster
@@ -160,6 +160,9 @@ def terminate() -> None:
     sys.exit()
 
 def get_ai_decision():
+    pass
+
+def draw_text(text: str):
     pass
 
 
@@ -205,8 +208,10 @@ def main() -> None:
     client_1 = Client(player_1)
 
     # Instantiate gorilla
-    gorilla = Gorilla("./assets/images/gorilla.png", (current_window_size))
-    gorilla.image = pygame.image.load(os.path.join("assets","images","gorilla.png")).convert_alpha()
+    gorilla = Gorilla("gamecore/assets/images/gorilla.png", (current_window_size))
+    gorilla.image = pygame.image.load(gorilla.image_path).convert_alpha()
+    gorilla.image_flip = pygame.image.load(gorilla.image_path).convert_alpha()
+    gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False) # flip the gorilla horizontally
 
     
     # Start screen
@@ -218,18 +223,55 @@ def main() -> None:
             current_window_size = user_input
         game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, current_window_size), (0,0))
 
+        # if user_input is True, it means the user pressed a key
         if user_input == True:
             current_start_event += 1
 
+        # 1. Big text appears
         if current_start_event == 1:
             # game_window.screen.fill((22,35,46))
-            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+            draw_text(gorilla.dialogues[1])
+            # wait 5 seconds before drawing next dialogue
+            draw_text(gorilla.dialogues[2])
+            draw_text(gorilla.dialogues[3])
+
+        # 2. Gorilla appears from the right of the screen
         elif current_start_event == 2:
-            game_window.screen.fill((255,0,0))
-        elif current_start_event == 3:
-            # game_window.screen.fill((255,255,255))
-            # gorilla.image = pygame.transform.flip(gorilla.image, True, False) # flip the gorilla horizontally # this will make the gorilla flips at each frame (-> find solution)
+            # game_window.screen.fill((255,0,0))
+            gorilla.move()
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+        
+        # 3. Gorilla speaks
+        elif current_start_event == 3:
+            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+            
+            draw_text(gorilla.dialogues[4])
+            # wait 5 seconds before drawing next dialogue
+            draw_text(gorilla.dialogues[5])
+            draw_text(gorilla.dialogues[6])
+        
+        # 4. Gorilla turns its back and speaks
+        elif current_start_event == 4:
+            # game_window.screen.fill((255,255,255))
+            game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+
+            draw_text(gorilla.dialogues[7])
+            # wait 5 seconds before drawing next dialogue
+            draw_text(gorilla.dialogues[8])
+        
+        # 5. Gorilla faces towards left again and speaks
+            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+            
+            draw_text(gorilla.dialogues[9])
+            # wait 5 seconds before drawing next dialogue
+            draw_text(gorilla.dialogues[10])
+            draw_text(gorilla.dialogues[11])
+            draw_text(gorilla.dialogues[12])
+        
+        # 6. Gorilla turn its back and leaves the screen from the right
+            game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+
+
         pygame.display.update() # Update the screen with the drawings
 
 

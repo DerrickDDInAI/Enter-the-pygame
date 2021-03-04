@@ -58,7 +58,7 @@ class Player:
         """
         return f"{self.name}"
     
-    def move():
+    def move(self):
         pass
 
 class AIBots(Player):
@@ -133,30 +133,45 @@ class Gorilla(Player):
     
         """
         My lines:
-        1. "Let's dive into the game!"
-        4. "Whaat? Who's there?"
-        7. "Another dimension? You created your designer?"
+        0. "Let's dive into the game!"
+        3. "Whaat? Who's there?"
+        6. "Another dimension? You created your designer?"
            "You waited for 29 years that he draws you like this ?!
            "Sorry to say but you're not exactly a picasso!"
            "Wait, that's not what is important. Why are you here?"
-        8. "A convergence?"
-        12. "Waiiitt come back!"
+        7. "A convergence?"
+        11. "Waiiitt come back!"
             " What does that mean? Train myself? In what? And for what?"
             "What a very strange gorilla... Well, let's play, maybe I'll find more information.
         """
         self.dialogues = [
-            "You're wrong.", # 1
-            "You're already in the game.", # 2
-            "You've always been in the game!", # 3
+            # "Let's dive into the game!"
+            "You're wrong.", # 0
+            "You're already in the game.", # 1
+            "You've always been in the game!", # 2
+
+            # "Whaat? Who's there?"
+            "...", # 3
             "My name is Maestro Gorilla.", # 4
             "I am a being from another dimension.", # 5
             "29 years ago in human time, I created my designer so that he could draw me.", # 6
+
+            # "Another dimension? You created your designer?"
+            # "You waited for 29 years that he draws you like this ?!
+            # "Sorry to say but you're not exactly a picasso!"
+            # "Wait, that's not what is important. Why are you here?"
             "From my dimension, we can see your past, present and all possible futures.", # 7
             "What we... what I saw in the chain of possibilities is a convergence.", # 8
+
+            # "A convergence?"
             "Something that must never happen!", # 9
             "However, I can't tell you more than that.", # 10
             "You're not ready... yet.", # 11
             "What I can tell you is to train yourself!" # 12
+            
+            # "Waiiitt come back!"
+            # " What does that mean? Train myself? In what? And for what?"
+            # "What a very strange gorilla... Well, let's play, maybe I'll find more information.
             ]
 
 #============================================================

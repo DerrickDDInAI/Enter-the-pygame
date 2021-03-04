@@ -162,14 +162,23 @@ def terminate() -> None:
 def get_ai_decision():
     pass
 
-def draw_text(text: str):
-    pass
+def draw_text(text: str, xy_pos_center: Tuple[int,int]):
+    """
+    Function to display text
+    * param 
+    :text to display
+    :xy_pos_center (x,y) coordinates of the center of text rectangle
+    
+    """
+    text_surface = game_font.render(text, True, (255,255,255)) # text, True for anti-aliased text, color in rgb
+    text_rect = text_surface.get_rect(center=xy_pos_center) # put the text in a rect to make it easier to display
+    game_window.screen.blit(text_surface, text_rect)
 
 
 def main() -> None:
 
     # Globals
-    global game_window
+    global game_window, game_font
 
     # CONSTANTS
     WINDOW_WIDTH_PX = 1440
@@ -195,9 +204,9 @@ def main() -> None:
     game_running = True # game loop 
     framerate_limit = 120
     time_s = 0.0
+    current_dialogue_index = 0
     current_level_index = 0
-    current_start_event = 0 # events happen at the start screen (event 0: just title slide; event 1: gorilla appears; event 2,3,...: dialogue; last event: gorilla disappears and game starts)
-    current_window_size = (game_window.width_px,game_window.height_px)
+    current_start_event = -1 # events happen at the start screen (event -1: just title slide; event 1: gorilla appears; event 2,3,...: dialogue; last event: gorilla disappears and game starts)
     # # Create empty dictionary that will store user input when necessary
     # input_dict: dict = {"size": None, "level": 0} 
 
@@ -208,7 +217,9 @@ def main() -> None:
     client_1 = Client(player_1)
 
     # Instantiate gorilla
-    gorilla = Gorilla("gamecore/assets/images/gorilla.png", (current_window_size))
+    gorilla = Gorilla("gamecore/assets/images/gorilla.png", (game_window.width_px,game_window.height_px))
+    ## convert() converts the image into a format easier for pygame => faster
+    ## alpha() otherwise pygame paints black where the image is empty/transparent
     gorilla.image = pygame.image.load(gorilla.image_path).convert_alpha()
     gorilla.image_flip = pygame.image.load(gorilla.image_path).convert_alpha()
     gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False) # flip the gorilla horizontally
@@ -217,66 +228,63 @@ def main() -> None:
     # Start screen
     levels_list = create_levels()
     while start_screen:
+
         user_input = client_1.wait_for_pressed_key()
         # if user_input is a tuple, it means the user changed the screen size
         if isinstance(user_input,tuple):
-            current_window_size = user_input
-        game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, current_window_size), (0,0))
+            game_window.width_px, game_window.height_px = user_input
+        game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
 
         # if user_input is True, it means the user pressed a key
         if user_input == True:
             current_start_event += 1
 
         # 1. Big text appears
-        if current_start_event == 1:
-            # game_window.screen.fill((22,35,46))
-            draw_text(gorilla.dialogues[1])
-            # wait 5 seconds before drawing next dialogue
-            draw_text(gorilla.dialogues[2])
-            draw_text(gorilla.dialogues[3])
+        # if current_start_event == 1:
+        #     game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
+        #     draw_text(str(round(time_s, 2)), (game_window.width_px/2,game_window.height_px - 20))
+        #     if time_s >= 5 and current_dialogue_index < 2:
+        #         time_s = 0.0 # reset time
+        #         current_dialogue_index += 1
+        #     draw_text(gorilla.dialogues[current_dialogue_index], (game_window.width_px/2,game_window.height_px/2))
 
+        # 1. Big text appears
+        if current_start_event in [0,1,2]:
+            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
+            draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
+        
         # 2. Gorilla appears from the right of the screen
-        elif current_start_event == 2:
-            # game_window.screen.fill((255,0,0))
+        elif current_start_event == 3:
+            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
             gorilla.move()
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
         
         # 3. Gorilla speaks
-        elif current_start_event == 3:
+        elif current_start_event in [4,5,6]:
+            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
+            draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
-            
-            draw_text(gorilla.dialogues[4])
-            # wait 5 seconds before drawing next dialogue
-            draw_text(gorilla.dialogues[5])
-            draw_text(gorilla.dialogues[6])
-        
-        # 4. Gorilla turns its back and speaks
-        elif current_start_event == 4:
-            # game_window.screen.fill((255,255,255))
-            game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
 
-            draw_text(gorilla.dialogues[7])
-            # wait 5 seconds before drawing next dialogue
-            draw_text(gorilla.dialogues[8])
+        # 4. Gorilla turns its back and speaks
+        elif current_start_event in [7,8]:
+            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
+            draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
+            game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
         
         # 5. Gorilla faces towards left again and speaks
+        elif current_start_event in [9,10,11,12]:
+            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
+            draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
-            
-            draw_text(gorilla.dialogues[9])
-            # wait 5 seconds before drawing next dialogue
-            draw_text(gorilla.dialogues[10])
-            draw_text(gorilla.dialogues[11])
-            draw_text(gorilla.dialogues[12])
         
         # 6. Gorilla turn its back and leaves the screen from the right
+        elif current_start_event == 13:
+            game_window.screen.fill((255,255,255)) # fill the screen with white
+            gorilla.move()
             game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
 
-
-        pygame.display.update() # Update the screen with the drawings
-
-
-    
-
+        # Update the screen with the drawings
+        pygame.display.update()
 
     ## Fill the window with BeCode color
     # game_window.screen.fill((22,35,46))
@@ -298,8 +306,8 @@ def main() -> None:
         ## (0,0): the position of the top left of bg_surface
         # if user_input is a tuple, it means the user changed the screen size
         if isinstance(user_input,tuple):
-            current_window_size = user_input
-        game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, current_window_size), (0,0))
+            game_window.width_px, game_window.height_px = user_input
+        game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
         # game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0)) 
         
         # Update the screen with the drawings

@@ -9,7 +9,8 @@ Game to demonstrate how:
 
 ## Import internal modules
 import sys
-import os.path
+# import os.path
+import math
 from typing import List, Set, Dict, TypedDict, Tuple, Optional
 
 ## Import 3rd party modules
@@ -18,8 +19,10 @@ from pygame.color import THECOLORS
 
 
 ## Import local modules
-from gamecore.player import Player, Gorilla
 from gamecore.level import Level
+from gamecore.environment import Environment
+from gamecore.player import AIBots, Player, Gorilla
+
 
 
 #=====================================================================
@@ -86,16 +89,17 @@ class Client:
 
             # Check keys continuously pressed
             keys = pygame.key.get_pressed()
-
-            if keys[pygame.K_LEFT]:
-                pass # move player left
-            if keys[pygame.K_RIGHT]:
-                pass # move player right
-            if keys[pygame.K_UP]:
-                pass # move player up
-            if keys[pygame.K_DOWN]:
-                pass # move player down
-                
+            if keys:
+                keys_pressed = {"left": False, "right": False, "up": False, "down": False}
+                if keys[pygame.K_LEFT]:
+                    keys_pressed["left"] = True
+                if keys[pygame.K_RIGHT]:
+                    keys_pressed["right"] = True
+                if keys[pygame.K_UP]:
+                    keys_pressed["up"] = True
+                if keys[pygame.K_DOWN]:
+                    keys_pressed["down"] = True
+                return keys_pressed
             # Resize the display
             if event.type == pygame.VIDEORESIZE:
                 game_window.screen = pygame.display.set_mode(
@@ -142,6 +146,7 @@ def create_levels() -> List:
     
     # 1. Create Level instances
     title_slide = Level("Title", "slide", "gamecore/assets/images/title_slide.png")
+    level_1 = Level("A new dimension")
 
     # 2. Import the background image
     ## convert() is not necessary but converts the image into a format easier for pygame => faster
@@ -204,17 +209,22 @@ def main() -> None:
     game_running = True # game loop 
     framerate_limit = 120
     time_s = 0.0
-    current_dialogue_index = 0
     current_level_index = 0
     current_start_event = -1 # events happen at the start screen (event -1: just title slide; event 1: gorilla appears; event 2,3,...: dialogue; last event: gorilla disappears and game starts)
     # # Create empty dictionary that will store user input when necessary
     # input_dict: dict = {"size": None, "level": 0} 
 
+    # Instantiate environment
+    world = Environment((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), color=(255,255,255))
     # Instantiate player
-    player_1 = Player(20, (1,1),'Yoyo', (255,0,0))
+    # player_1 = Player(20, (1,1),'Yoyo', (255,0,0))
+    player_1 = Player((100, world.height/2), size=50, mass=100, name="John Titor", color=(22,35,46))
 
     # Instantiate local client who will control player_1
     client_1 = Client(player_1)
+
+    # Instantiate aibots
+    aibot_1 = AIBots((world.width - 100, world.height/2), size=50, mass=200)
 
     # Instantiate gorilla
     gorilla = Gorilla("gamecore/assets/images/gorilla.png", (game_window.width_px,game_window.height_px))
@@ -257,31 +267,35 @@ def main() -> None:
         elif current_start_event == 3:
             game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
             gorilla.move()
-            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
         
         # 3. Gorilla speaks
-        elif current_start_event in [4,5,6]:
+        elif current_start_event in [4,5,6,7]:
             game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
             draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
-            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
 
         # 4. Gorilla turns its back and speaks
-        elif current_start_event in [7,8]:
+        elif current_start_event in [8,9]:
             game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
             draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
-            game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+            game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
         
         # 5. Gorilla faces towards left again and speaks
-        elif current_start_event in [9,10,11,12]:
+        elif current_start_event in [10,11,12,13]:
             game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
             draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
-            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+            game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
         
         # 6. Gorilla turn its back and leaves the screen from the right
         elif current_start_event == 13:
             game_window.screen.fill((255,255,255)) # fill the screen with white
             gorilla.move()
-            game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height()))
+            game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
+        
+        # Quit the start screen loop
+        elif current_start_event == 14:
+            start_screen = False
 
         # Update the screen with the drawings
         pygame.display.update()
@@ -291,6 +305,8 @@ def main() -> None:
     # game_window.screen.fill(THECOLORS['black'])
     # pygame.display.update()
 
+    # Enter level 1
+    current_level_index = 1
 
     while game_running:
         # Get the delta t for one frame (this changes depending on system load).
@@ -307,11 +323,38 @@ def main() -> None:
         # if user_input is a tuple, it means the user changed the screen size
         if isinstance(user_input,tuple):
             game_window.width_px, game_window.height_px = user_input
-        game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
+        game_window.screen.fill(world.color) # fill the screen with white
+        # game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
         # game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0)) 
+
+        # if user_input is a dictionary, it means the user is pressing a key
+        if isinstance(user_input,dict):
+            if user_input["left"]:
+                player_1.angle -= 1
+            if user_input["right"]:
+                player_1.angle += 1
+            if user_input["up"]:
+                player_1.angle = math.pi - player_1.angle
+            if user_input["down"]:
+                player_1.angle = math.pi + player_1.angle
+            player_1.speed *= 2
         
+        player_1.move()
+        world.attraction(player_1, aibot_1)
+        world.add_air_resistance(player_1)
+        world.collide(player_1, aibot_1)
+        world.bounce(player_1)
+
+        # Players
+        pygame.draw.circle(game_window.screen, player_1.color, (player_1.x, player_1.y), player_1.size)
+
+        # AIBots
+        pygame.draw.circle(game_window.screen, aibot_1.color, (aibot_1.x, aibot_1.y), aibot_1.size)
+
+
         # Update the screen with the drawings
         pygame.display.update()
+        # pygame.display.flip() # difference between flip() and update(): flip updates the entire screen; update(rect) you can update portion of the display
         
         # Time
         time_s += dt_s # Measure time spent

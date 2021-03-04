@@ -1,10 +1,28 @@
 #=====================================================================
+# Import
+#=====================================================================
+
+## Import internal modules
+import math
+from typing import List, Set, Dict, TypedDict, Tuple, Optional
+
+## Import 3rd party modules
+
+
+## Import local modules
+
+
+#=====================================================================
 # Classes
 #=====================================================================
+
+# from pygame import math
+import math
 
 class Player:
     """
     Player is a circle.
+    Has velocity, size and mass
     It has 2 attributes: name, xxx
     * name: xxx
     * xxx: xxx
@@ -20,11 +38,11 @@ class Player:
     
     def __init__(
         self,
-        radius: int,
-        xy_pos: tuple,
+        xy_position: tuple,
+        size = 50,
+        mass: int = 1,
         name: str = None,
         color: tuple = (0,0,255), # RGB color code for blue
-        boost: float = 5.0
     ) -> None:
         """
         Function to create an instance of Player class
@@ -34,21 +52,23 @@ class Player:
           (when player uses boost: boost is set to 0 and has to wait 5.0 seconds to use it again)
         """
         Player.count_created_players += 1
-        self.radius = radius
         self.x: int
         self.y: int
-        self.x, self.y = xy_pos
+        self.x, self.y = xy_position
+        self.size = size
+        self.thickness = 0
+        self.speed = 0 # player starts with no speed
+        self.angle = 0
+        self.mass = mass
+        self.elasticity = 0.9
         
         if name is None:
             self.name = f"player_{Player.count_created_players}"
         else:
             self.name = name
         
-        self.color = color
-        self.boost = boost
-        # self.speed_x: float = 
-        # self.speed_y: float = 
-
+        self.color: Tuple[int,int,int] = color
+        self.boost: float = 5.0
 
         Player.players_list.append(self)
 
@@ -59,7 +79,12 @@ class Player:
         return f"{self.name}"
     
     def move(self):
-        pass
+        """
+        Function to move the player according to its speed and angle
+        """
+        self.x += math.sin(self.angle) * self.speed
+        self.y -= math.cos(self.angle) * self.speed
+    
 
 class AIBots(Player):
     """
@@ -79,8 +104,9 @@ class AIBots(Player):
     
     def __init__(
         self,
-        radius: int,
-        xy_pos: tuple,
+        xy_position: tuple,
+        size = 50,
+        mass: int = 1,
         name: str = None,
         color: tuple = (255,0,0), # RGB color code for red
         boost: float = 5.0
@@ -93,10 +119,15 @@ class AIBots(Player):
           (when player uses boost: boost is set to 0 and has to wait 5.0 seconds to use it again)
         """
         AIBots.count_created_aibots += 1
-        self.radius = radius
         self.x: int
         self.y: int
-        self.x, self.y = xy_pos
+        self.x, self.y = xy_position
+        self.size = size
+        self.thickness = 0
+        self.speed = 0 # aibot starts with no speed
+        self.angle = 0
+        self.mass = mass
+        self.elasticity = 0.9
 
         if name is None:
             self.name = f"aibots_{AIBots.count_created_aibots}"
@@ -112,7 +143,7 @@ class AIBots(Player):
         AIBots.aibots_list.append(self)
 
 
-class Gorilla(Player):
+class Gorilla:
     """
     Gorilla class
     """
@@ -154,26 +185,28 @@ class Gorilla(Player):
             "...", # 3
             "My name is Maestro Gorilla.", # 4
             "I am a being from another dimension.", # 5
-            "29 years ago in human time, I created my designer so that he could draw me.", # 6
+            "29 years ago in human time...", # 6
+            "I created my designer so that he could draw me.", # 7
 
             # "Another dimension? You created your designer?"
             # "You waited for 29 years that he draws you like this ?!
             # "Sorry to say but you're not exactly a picasso!"
             # "Wait, that's not what is important. Why are you here?"
-            "From my dimension, we can see your past, present and all possible futures.", # 7
-            "What we... what I saw in the chain of possibilities is a convergence.", # 8
+            "From my dimension, we can see your past, present and all possible futures.", # 8
+            "What we... what I saw in the chain of possibilities is a convergence.", # 9
 
             # "A convergence?"
-            "Something that must never happen!", # 9
-            "However, I can't tell you more than that.", # 10
-            "You're not ready... yet.", # 11
-            "What I can tell you is to train yourself!" # 12
-            
+            "Something that must never happen!", # 10
+            "However, I can't tell you more than that.", # 11
+            "You're not ready... yet.", # 12
+            "What I can tell you is to train yourself!" # 13
+
             # "Waiiitt come back!"
             # " What does that mean? Train myself? In what? And for what?"
             # "What a very strange gorilla... Well, let's play, maybe I'll find more information.
             ]
-
+    def move(self):
+        pass
 #============================================================
 # Main functions
 #============================================================

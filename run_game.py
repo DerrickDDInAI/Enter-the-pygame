@@ -334,7 +334,7 @@ def game(genomes, config) -> None:
         aibot_size = 25
         aibot_y = random.uniform(aibot_size, world.height - aibot_size)
         aibots_list.append(
-            AIBots((world.width - 100, aibot_y), size=aibot_size, mass=1))
+            AIBots((world.width - 100, aibot_y), size=aibot_size, mass=50))
         genomes_list.append(genome)
 
     print(aibots_list[0].speed)
@@ -363,15 +363,15 @@ def game(genomes, config) -> None:
         # game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
         # game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0))
 
-        # Reward each AIBot a fitness of 0.1 for each frame it stays alive
+        # Punish each AIBot a fitness of 0.1 for each frame it stays alive
         for i, aibot in enumerate(aibots_list):
-            genomes_list[i].fitness += 0.1
+            # genomes_list[i].fitness -= 0.1
 
         # get_ai_decision()
         # Give its location and its distance compared to player and neural network will output a list of values
         # From  which it can determine in which direction to move
         # Use a tanh activation function to have the output results between -1 and 1
-            output: list = neural_nets_list[aibots_list.index(aibot)].activate((aibot.x, aibot.y, abs(
+            output: list = neural_nets_list[i].activate((aibot.x, aibot.y, abs(
                 aibot.x - client_1.player.x), abs(aibot.y - client_1.player.y)))
 
             # if output[0] > 0.5: go left
@@ -393,20 +393,12 @@ def game(genomes, config) -> None:
                 aibot.speed = 20
 
             aibot.move()
-
-        player_1.move()
-        world.add_air_resistance(player_1)
-        world.bounce(player_1)
-        for obstacle in obstacles_list:
-            world.collide(obstacle, player_1)
-
-        for aibot in aibots_list:
             world.add_air_resistance(aibot)
             world.attraction(player_1, aibot)
             bounce: bool = world.bounce(aibot)
             # If hits a border, punish the aibot to prevent him from just staying at the border
             if bounce:
-                genomes_list[aibots_list.index(aibot)].fitness -= 3
+                genomes_list[i].fitness -= 3
 
             collide_player: bool = world.collide(player_1, aibot)
             for obstacle in obstacles_list:
@@ -418,6 +410,20 @@ def game(genomes, config) -> None:
                     genomes_list.pop(aibots_list.index(aibot))
                     aibots_list.pop(aibots_list.index(aibot))
                     break
+
+        player_1.move()
+        world.add_air_resistance(player_1)
+        world.bounce(player_1)
+
+        for obstacle in obstacles_list:
+            # obstacle.move()
+            world.add_air_resistance(obstacle)
+            world.collide(obstacle, player_1)
+            world.bounce(obstacle)
+            # Limits obstacle's speed
+            if obstacle.speed > 20:
+                obstacle.speed = 20
+
             
         # Draw Obstacles
         for obstacle in obstacles_list:
@@ -534,7 +540,7 @@ if __name__ == '__main__':
     max_size: int = 50
     for _ in range(10):
         obstacle = Obstacle((random.uniform(0, world.width), random.uniform(
-            0, world.height)), size=random.uniform(min_size, max_size), mass=200)
+            0, world.height)), size=random.uniform(min_size, max_size), mass=50)
         # Assign rectangle: pygame.Rect(left, top, width, height)
         # obstacle.rect = pygame.Rect(obstacle.x, obstacle.y, random.uniform(obstacle_min_size, world.width/10), random.uniform(obstacle_min_size, world.width/10))
         obstacles_list.append(obstacle)

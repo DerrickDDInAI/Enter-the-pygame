@@ -138,8 +138,6 @@ class AIBots(Player):
 
         self.color = color
         self.boost = boost
-        # self.speed_x: float =
-        # self.speed_y: float =
 
         AIBots.aibots_list.append(self)
 
@@ -169,11 +167,11 @@ class Obstacle (Player):
         self.y: int
         self.x, self.y = xy_position
         self.size = size
-        self.thickness = 1
+        self.thickness = 0
         self.speed = 0  # player starts with no speed
         self.angle = 0
         self.mass = mass
-        self.elasticity = 0.9
+        self.elasticity = 2
 
         if name is None:
             self.name = f"obstacle_{Obstacle.count_created_obstacles}"

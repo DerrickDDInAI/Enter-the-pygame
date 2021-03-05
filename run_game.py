@@ -15,8 +15,8 @@ from typing import List, Set, Dict, TypedDict, Tuple, Optional
 
 ## Import 3rd party modules
 import pygame
-from pygame.color import THECOLORS
-
+# from pygame.color import THECOLORS
+import neat
 
 ## Import local modules
 from gamecore.level import Level
@@ -101,16 +101,16 @@ class Client:
             # vector = pygame.Vector2(0,0)
             if keys[pygame.K_LEFT]:
                 # vector += pygame.Vector2(-1,2)
-                player_1.angle, player_1.speed = world.add_vectors((player_1.angle, player_1.speed), (- 1 * math.pi/2,2))
+                self.player.angle, self.player.speed = world.add_vectors((self.player.angle, self.player.speed), (- 1 * math.pi/2,2))
             elif keys[pygame.K_RIGHT]:
-                player_1.angle, player_1.speed = world.add_vectors((player_1.angle, player_1.speed), (math.pi/2,2))
+                self.player.angle, self.player.speed = world.add_vectors((self.player.angle, self.player.speed), (math.pi/2,2))
             if keys[pygame.K_UP]:
-                player_1.angle, player_1.speed = world.add_vectors((player_1.angle, player_1.speed), (0,2))
+                self.player.angle, self.player.speed = world.add_vectors((self.player.angle, self.player.speed), (0,2))
             elif keys[pygame.K_DOWN]:
-                player_1.angle, player_1.speed = world.add_vectors((player_1.angle, player_1.speed), (math.pi,2))
+                self.player.angle, self.player.speed = world.add_vectors((self.player.angle, self.player.speed), (math.pi,2))
         # Limits player_1's speed
-        if player_1.speed > 20:
-            player_1.speed = 20
+        if self.player.speed > 20:
+            self.player.speed = 20
     
     def wait_for_pressed_key(self) -> bool:
         """
@@ -183,76 +183,28 @@ def draw_text(text: str, xy_pos_center: Tuple[int,int]):
     text_rect = text_surface.get_rect(center=xy_pos_center) # put the text in a rect to make it easier to display
     game_window.screen.blit(text_surface, text_rect)
 
-
-def main() -> None:
-
-    # Globals
-    global game_window, game_font, player_1, world
-
-    # CONSTANTS
-    WINDOW_WIDTH_PX = 1440
-    WINDOW_HEIGHT_PX = 900
-    CAPTION = "Enter the Pygame"
-
-    # Setup
-    pygame.init() # initiate pygame
-    pygame.font.init()  # initiate font
-    # game_font = pygame.font.Font('04B_19.ttf',40) # create a font (style, size)
-    game_font = pygame.font.SysFont("comicsans", 50)
-    # END_FONT = pygame.font.SysFont("comicsans", 70)
-
-    # Display
-    game_window = GameWindow((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), CAPTION)
-    game_window.display_caption()
-
-    # Clock
-    main_clock = pygame.time.Clock() # instantiate clock to limit the frame rate
-
+def start_screen() -> None:
+    """
+    Function to start at level 0: "Title slide"
+    """
     # Variables
-    start_screen = True # start screen loop
-    game_running = True # game loop 
-    framerate_limit = 120
-    time_s = 0.0
+    start_screen = True
     current_level_index = 0
-    current_start_event = -1 # events happen at the start screen (event -1: just title slide; event 1: gorilla appears; event 2,3,...: dialogue; last event: gorilla disappears and game starts)
-    # # Create empty dictionary that will store user input when necessary
-    # input_dict: dict = {"size": None, "level": 0}
+    current_story_event = -1 # title slide just before gorilla speaks
 
-    # Instantiate environment
-    world = Environment((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), color=(255,255,255))
-    # Instantiate player
-    # player_1 = Player(20, (1,1),'Yoyo', (255,0,0))
-    player_1 = Player((100, world.height/2), size=50, mass=100, name="John Titor", color=(22,35,46))
-
-    # Instantiate local client who will control player_1
-    client_1 = Client(player_1)
-
-    # Instantiate aibots
-    aibot_1 = AIBots((world.width - 100, world.height/2), size=50, mass=1)
-
-    # Instantiate gorilla
-    gorilla = Gorilla("gamecore/assets/images/gorilla.png", (game_window.width_px,game_window.height_px))
-    ## convert() converts the image into a format easier for pygame => faster
-    ## alpha() otherwise pygame paints black where the image is empty/transparent
-    gorilla.image = pygame.image.load(gorilla.image_path).convert_alpha()
-    gorilla.image_flip = pygame.image.load(gorilla.image_path).convert_alpha()
-    gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False) # flip the gorilla horizontally
-
-    
-    # Start screen
-    levels_list = create_levels()
-    start_screen = False
     while start_screen:
 
+        # Get user input
         user_input = client_1.wait_for_pressed_key()
-        # if user_input is a tuple, it means the user changed the screen size
+        
+        # If user_input is a tuple, the user changed the screen size
         if isinstance(user_input,tuple):
             game_window.width_px, game_window.height_px = user_input
         game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
 
-        # if user_input is True, it means the user pressed a key
+        # If user_input is True, the user pressed a key to go forward in the story
         if user_input == True:
-            current_start_event += 1
+            current_story_event += 1
 
         # 1. Big text appears
         # if current_start_event == 1:
@@ -264,55 +216,69 @@ def main() -> None:
         #     draw_text(gorilla.dialogues[current_dialogue_index], (game_window.width_px/2,game_window.height_px/2))
 
         # 1. Big text appears
-        if current_start_event in [0,1,2]:
+        if current_story_event in [0,1,2]:
             game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
-            draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
+            draw_text(gorilla.dialogues[current_story_event], (game_window.width_px/2,game_window.height_px/2))
+            gorilla.sounds.play()
         
         # 2. Gorilla appears from the right of the screen
-        elif current_start_event == 3:
+        elif current_story_event == 3:
             game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
             gorilla.move()
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
-        
+            gorilla.sounds.play()
+
         # 3. Gorilla speaks
-        elif current_start_event in [4,5,6,7]:
+        elif current_story_event in [4,5,6,7]:
             game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
-            draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
+            draw_text(gorilla.dialogues[current_story_event], (game_window.width_px/2,game_window.height_px/2))
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
+            gorilla.sounds.play()
 
         # 4. Gorilla turns its back and speaks
-        elif current_start_event in [8,9]:
+        elif current_story_event in [8,9]:
             game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
-            draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
+            draw_text(gorilla.dialogues[current_story_event], (game_window.width_px/2,game_window.height_px/2))
             game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
+            gorilla.sounds.play()
         
         # 5. Gorilla faces towards left again and speaks
-        elif current_start_event in [10,11,12,13]:
+        elif current_story_event in [10,11,12,13]:
             game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
-            draw_text(gorilla.dialogues[current_start_event], (game_window.width_px/2,game_window.height_px/2))
+            draw_text(gorilla.dialogues[current_story_event], (game_window.width_px/2,game_window.height_px/2))
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
+            gorilla.sounds.play()
         
         # 6. Gorilla turn its back and leaves the screen from the right
-        elif current_start_event == 13:
+        elif current_story_event == 13:
             game_window.screen.fill((255,255,255)) # fill the screen with white
             gorilla.move()
             game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
+            gorilla.sounds.play()
         
         # Quit the start screen loop
-        elif current_start_event == 14:
+        elif current_story_event == 14:
+            # stop gorilla sounds
+            gorilla.sounds.stop()
             start_screen = False
 
         # Update the screen with the drawings
         pygame.display.update()
 
-    ## Fill the window with BeCode color
-    # game_window.screen.fill((22,35,46))
-    # game_window.screen.fill(THECOLORS['black'])
-    # pygame.display.update()
+        # Time
+        main_clock.tick(framerate_limit) # Limit the frame rate to max the framerate_limit
 
-    # Enter level 1
-    current_level_index = 1
+def game() -> None:
+    """
+    Function to play the game for one generation of AIBots
+    """
 
+    # Variables
+    game_running = True # game loop 
+    time_s = 0.0
+    current_level_index = 1 # level 1
+
+    # Enter game loop
     while game_running:
         # Get the delta t for one frame (this changes depending on system load).
         dt_s = float(main_clock.tick(framerate_limit) * 1e-3)
@@ -357,8 +323,75 @@ def main() -> None:
 
 
 #============================================================
+# Set up the stage
+#============================================================
+
+# Globals
+global game_window, game_font, player_1, world
+
+# CONSTANTS
+WINDOW_WIDTH_PX = 1440
+WINDOW_HEIGHT_PX = 900
+CAPTION = "Enter the Pygame"
+
+# Variables
+framerate_limit = 120
+
+# Setup
+pygame.init() # initiate pygame
+pygame.font.init()  # initiate font
+game_font = pygame.font.SysFont("comicsans", 50)
+# end_font = pygame.font.SysFont("comicsans", 70)
+# game_font = pygame.font.Font('04B_19.ttf',40) # create a font (style, size)
+
+# Display
+game_window = GameWindow((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), CAPTION)
+game_window.display_caption()
+
+# Sound
+
+
+# Clock
+main_clock = pygame.time.Clock() # instantiate clock to limit the frame rate
+
+
+# Instantiate environment
+world = Environment((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), color=(255,255,255))
+# Instantiate player
+# player_1 = Player(20, (1,1),'Yoyo', (255,0,0))
+player_1 = Player((100, world.height/2), size=50, mass=100, name="John Titor", color=(22,35,46))
+
+# Instantiate local client who will control player_1
+client_1 = Client(player_1)
+
+# Instantiate aibots
+aibot_1 = AIBots((world.width - 100, world.height/2), size=50, mass=1)
+
+# Instantiate gorilla
+gorilla = Gorilla("gamecore/assets/images/gorilla.png", (game_window.width_px,game_window.height_px))
+## convert() converts the image into a format easier for pygame => faster
+## alpha() otherwise pygame paints black where the image is empty/transparent
+gorilla.image = pygame.image.load(gorilla.image_path).convert_alpha()
+gorilla.image_flip = pygame.image.load(gorilla.image_path).convert_alpha()
+gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False) # flip the gorilla horizontally
+# import gorilla sounds
+gorilla.sounds = pygame.mixer.Sound("gamecore/assets/sounds/gorilla_sounds.mp3")
+
+# Start screen
+levels_list = create_levels()
+
+
+#============================================================
 # Run
 #============================================================
 
-main()
-terminate()
+if __name__ == '__main__':
+    # Determine path to configuration file. This path manipulation is
+    # here so that the script will run successfully regardless of the
+    # current working directory.
+    # local_dir = os.path.dirname(__file__)
+    # config_path = os.path.join(local_dir, 'config-feedforward.txt')
+    # run(config_path)
+    start_screen()
+    game()
+    terminate()

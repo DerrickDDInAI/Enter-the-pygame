@@ -85,11 +85,11 @@ class Environment:
             
             player_1_vector_a = (player_1.angle, player_1.speed * (player_1.mass - player_2.mass) / total_mass)
             player_1_vector_b = (angle, 2 * player_2.speed * player_2.mass / total_mass)
-            player_1.angle, player_1.speed = self.add_vectors((player_1_vector_a, player_1_vector_b))
+            player_1.angle, player_1.speed = self.add_vectors(player_1_vector_a, player_1_vector_b)
 
             player_2_vector_a = (player_2.angle, player_2.speed * (player_2.mass - player_1.mass) / total_mass)
             player_2_vector_b = (angle +math.pi, 2 * player_1.speed * player_1.mass / total_mass)
-            player_2.angle, player_2.speed = self.add_vectors((player_2_vector_a, player_2_vector_b))
+            player_2.angle, player_2.speed = self.add_vectors(player_2_vector_a, player_2_vector_b)
 
             elasticity = player_1.elasticity * player_2.elasticity
             player_1.speed *= elasticity

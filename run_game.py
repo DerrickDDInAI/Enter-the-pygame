@@ -64,7 +64,7 @@ class Client:
         """
         self.player = player
     
-    def get_user_input(self) -> dict:
+    def get_user_input(self) -> Tuple[int,int]:
         """
         Function to get user input
         """
@@ -86,20 +86,7 @@ class Client:
                 # Accelerate player if space bar is pressed and boost available
                 if event.key == pygame.K_SPACE: # and player.boost == 5.0:
                     pass
-
-            # Check keys continuously pressed
-            keys = pygame.key.get_pressed()
-            if keys:
-                keys_pressed = {"left": False, "right": False, "up": False, "down": False}
-                if keys[pygame.K_LEFT]:
-                    keys_pressed["left"] = True
-                if keys[pygame.K_RIGHT]:
-                    keys_pressed["right"] = True
-                if keys[pygame.K_UP]:
-                    keys_pressed["up"] = True
-                if keys[pygame.K_DOWN]:
-                    keys_pressed["down"] = True
-                return keys_pressed
+            
             # Resize the display
             if event.type == pygame.VIDEORESIZE:
                 game_window.screen = pygame.display.set_mode(
@@ -107,6 +94,23 @@ class Client:
                 return event.dict['size']
                 # game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, event.dict['size']), (0,0))
                 # pygame.display.flip()
+
+        # Check keys continuously pressed (needs to be outside of the for loop otherwise only be executed once per event in the event queue)
+        keys = pygame.key.get_pressed()
+        if keys:
+            # vector = pygame.Vector2(0,0)
+            if keys[pygame.K_LEFT]:
+                # vector += pygame.Vector2(-1,2)
+                player_1.angle, player_1.speed = world.add_vectors((player_1.angle, player_1.speed), (- 1 * math.pi/2,2))
+            elif keys[pygame.K_RIGHT]:
+                player_1.angle, player_1.speed = world.add_vectors((player_1.angle, player_1.speed), (math.pi/2,2))
+            if keys[pygame.K_UP]:
+                player_1.angle, player_1.speed = world.add_vectors((player_1.angle, player_1.speed), (0,2))
+            elif keys[pygame.K_DOWN]:
+                player_1.angle, player_1.speed = world.add_vectors((player_1.angle, player_1.speed), (math.pi,2))
+        # Limits player_1's speed
+        if player_1.speed > 20:
+            player_1.speed = 20
     
     def wait_for_pressed_key(self) -> bool:
         """
@@ -183,7 +187,7 @@ def draw_text(text: str, xy_pos_center: Tuple[int,int]):
 def main() -> None:
 
     # Globals
-    global game_window, game_font
+    global game_window, game_font, player_1, world
 
     # CONSTANTS
     WINDOW_WIDTH_PX = 1440
@@ -212,7 +216,7 @@ def main() -> None:
     current_level_index = 0
     current_start_event = -1 # events happen at the start screen (event -1: just title slide; event 1: gorilla appears; event 2,3,...: dialogue; last event: gorilla disappears and game starts)
     # # Create empty dictionary that will store user input when necessary
-    # input_dict: dict = {"size": None, "level": 0} 
+    # input_dict: dict = {"size": None, "level": 0}
 
     # Instantiate environment
     world = Environment((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), color=(255,255,255))
@@ -224,7 +228,7 @@ def main() -> None:
     client_1 = Client(player_1)
 
     # Instantiate aibots
-    aibot_1 = AIBots((world.width - 100, world.height/2), size=50, mass=200)
+    aibot_1 = AIBots((world.width - 100, world.height/2), size=50, mass=1)
 
     # Instantiate gorilla
     gorilla = Gorilla("gamecore/assets/images/gorilla.png", (game_window.width_px,game_window.height_px))
@@ -237,6 +241,7 @@ def main() -> None:
     
     # Start screen
     levels_list = create_levels()
+    start_screen = False
     while start_screen:
 
         user_input = client_1.wait_for_pressed_key()
@@ -327,23 +332,13 @@ def main() -> None:
         # game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
         # game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0)) 
 
-        # if user_input is a dictionary, it means the user is pressing a key
-        if isinstance(user_input,dict):
-            if user_input["left"]:
-                player_1.angle -= 1
-            if user_input["right"]:
-                player_1.angle += 1
-            if user_input["up"]:
-                player_1.angle = math.pi - player_1.angle
-            if user_input["down"]:
-                player_1.angle = math.pi + player_1.angle
-            player_1.speed *= 2
-        
         player_1.move()
+        aibot_1.move()
         world.attraction(player_1, aibot_1)
         world.add_air_resistance(player_1)
         world.collide(player_1, aibot_1)
         world.bounce(player_1)
+        world.bounce(aibot_1)
 
         # Players
         pygame.draw.circle(game_window.screen, player_1.color, (player_1.x, player_1.y), player_1.size)

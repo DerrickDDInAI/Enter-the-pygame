@@ -8,6 +8,7 @@ Game to demonstrate how:
 #=====================================================================
 
 ## Import internal modules
+import random
 import sys
 # import os.path
 import math
@@ -171,15 +172,16 @@ def terminate() -> None:
 def get_ai_decision():
     pass
 
-def draw_text(text: str, xy_pos_center: Tuple[int,int]):
+def draw_text(text: str, color: Tuple[int,int,int], xy_pos_center: Tuple[int,int]):
     """
     Function to display text
     * param 
-    :text to display
+    :text :text to display
+    :color :font color
     :xy_pos_center (x,y) coordinates of the center of text rectangle
     
     """
-    text_surface = game_font.render(text, True, (255,255,255)) # text, True for anti-aliased text, color in rgb
+    text_surface = game_font.render(text, True, color) # text, True for anti-aliased text, color in rgb
     text_rect = text_surface.get_rect(center=xy_pos_center) # put the text in a rect to make it easier to display
     game_window.screen.blit(text_surface, text_rect)
 
@@ -208,7 +210,7 @@ def start_screen() -> None:
 
         # 1. Big text appears
         # if current_start_event == 1:
-        #     game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
+        #     game_window.screen.fill(becode_color) # fill the screen with BeCode color
         #     draw_text(str(round(time_s, 2)), (game_window.width_px/2,game_window.height_px - 20))
         #     if time_s >= 5 and current_dialogue_index < 2:
         #         time_s = 0.0 # reset time
@@ -217,35 +219,35 @@ def start_screen() -> None:
 
         # 1. Big text appears
         if current_story_event in [0,1,2]:
-            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
-            draw_text(gorilla.dialogues[current_story_event], (game_window.width_px/2,game_window.height_px/2))
+            game_window.screen.fill(becode_color) # fill the screen with BeCode color
+            draw_text(gorilla.dialogues[current_story_event], slide_font_color, (game_window.width_px/2,game_window.height_px/2))
             gorilla.sounds.play()
         
         # 2. Gorilla appears from the right of the screen
         elif current_story_event == 3:
-            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
+            game_window.screen.fill(becode_color) # fill the screen with BeCode color
             gorilla.move()
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
             gorilla.sounds.play()
 
         # 3. Gorilla speaks
         elif current_story_event in [4,5,6,7]:
-            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
-            draw_text(gorilla.dialogues[current_story_event], (game_window.width_px/2,game_window.height_px/2))
+            game_window.screen.fill(becode_color) # fill the screen with BeCode color
+            draw_text(gorilla.dialogues[current_story_event], slide_font_color, (game_window.width_px/2,game_window.height_px/2))
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
             gorilla.sounds.play()
 
         # 4. Gorilla turns its back and speaks
         elif current_story_event in [8,9]:
-            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
-            draw_text(gorilla.dialogues[current_story_event], (game_window.width_px/2,game_window.height_px/2))
+            game_window.screen.fill(becode_color) # fill the screen with BeCode color
+            draw_text(gorilla.dialogues[current_story_event], slide_font_color, (game_window.width_px/2,game_window.height_px/2))
             game_window.screen.blit(gorilla.image_flip, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
             gorilla.sounds.play()
         
         # 5. Gorilla faces towards left again and speaks
         elif current_story_event in [10,11,12,13]:
-            game_window.screen.fill((22,35,46)) # fill the screen with BeCode color
-            draw_text(gorilla.dialogues[current_story_event], (game_window.width_px/2,game_window.height_px/2))
+            game_window.screen.fill(becode_color) # fill the screen with BeCode color
+            draw_text(gorilla.dialogues[current_story_event], slide_font_color, (game_window.width_px/2,game_window.height_px/2))
             game_window.screen.blit(gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
             gorilla.sounds.play()
         
@@ -268,24 +270,50 @@ def start_screen() -> None:
         # Time
         main_clock.tick(framerate_limit) # Limit the frame rate to max the framerate_limit
 
-def game() -> None:
+def game(genomes, config) -> None:
     """
-    Function to play the game for one generation of AIBots
+    Function to play the game for current genome of AIBots.
+    1. Create population of AIBots. Each AIBots has its own neural network.
+    2. Run the game for that population and set their respective fitness scores based on how long they survive.
     """
+    # Global
+    global generation
+    generation += 1 # Increment by 1 at every game session
 
     # Variables
-    game_running = True # game loop 
-    time_s = 0.0
-    current_level_index = 1 # level 1
+    game_running: bool = True # Game loop 
+    time_s: float = 0.0
+    # current_level_index = 1 # level 1
+    player_1.x, player_1.y = (100, world.height/2) # Restart player position
+    
+    ## Create empty lists
+    genomes_list: list = []
+    aibots_list: List[AIBots] = []
+    neural_nets_list: list = []
+
+    for genome_id, genome in genomes:
+        genome.fitness = 0  # AIBot starts the game with fitness score at 0
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+        neural_nets_list.append(net)
+        # create an aibot with specific size and starting at random y position within boundaries included
+        aibot_size = 25
+        aibot_y = random.uniform(aibot_size, world.height - aibot_size)
+        aibots_list.append(AIBots((world.width - 100, aibot_y), size=aibot_size, mass=1))
+        genomes_list.append(genome)
+    
+    print(aibots_list[0].speed)
+
+    # Instantiate aibots
+    # aibot_1 = AIBots((world.width - 100, world.height/2), size=50, mass=1)
 
     # Enter game loop
-    while game_running:
+    while game_running and len(aibots_list):
+
         # Get the delta t for one frame (this changes depending on system load).
         dt_s = float(main_clock.tick(framerate_limit) * 1e-3)
 
         # Get user input
         user_input = client_1.get_user_input()
-        get_ai_decision()
         
         # Display background
         ## Display level 1 background surface
@@ -294,23 +322,70 @@ def game() -> None:
         # if user_input is a tuple, it means the user changed the screen size
         if isinstance(user_input,tuple):
             game_window.width_px, game_window.height_px = user_input
+            world.width, world.height = user_input # update the environment as well
         game_window.screen.fill(world.color) # fill the screen with white
         # game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
-        # game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0)) 
+        # game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0))
 
+        # Reward each AIBot a fitness of 0.1 for each frame it stays alive
+        for i, aibot in enumerate(aibots_list):
+            genomes_list[i].fitness += 0.1
+            
+        # get_ai_decision()
+        # Give its location and its distance compared to player and neural network will output a list of values
+        # From  which it can determine in which direction to move
+        ## Use a tanh activation function to have the output results between -1 and 1
+            output: list = neural_nets_list[aibots_list.index(aibot)].activate((aibot.x, aibot.y, abs(
+                aibot.x - client_1.player.x), abs(aibot.y - client_1.player.y)))
+
+            ## if output[0] > 0.5: go left
+            if output[0] > 0.5:
+                aibot.angle, aibot.speed = world.add_vectors((aibot.angle, aibot.speed), (- 1 * math.pi/2,2))
+            if output[1] > 0.5:
+                aibot.angle, aibot.speed = world.add_vectors((aibot.angle, aibot.speed), (math.pi/2,2))
+            if output[2] > 0.5:
+                aibot.angle, aibot.speed = world.add_vectors((aibot.angle, aibot.speed), (0,2))
+            if output[3] > 0.5:
+                aibot.angle, aibot.speed = world.add_vectors((aibot.angle, aibot.speed), (math.pi,2))
+
+            # Limits aibot's speed
+            if aibot.speed > 20:
+                aibot.speed = 20
+
+            aibot.move()
+        
         player_1.move()
-        aibot_1.move()
-        world.attraction(player_1, aibot_1)
         world.add_air_resistance(player_1)
-        world.collide(player_1, aibot_1)
         world.bounce(player_1)
-        world.bounce(aibot_1)
 
-        # Players
+        for aibot in aibots_list:
+            world.add_air_resistance(aibot)
+            world.attraction(player_1, aibot)
+            world.bounce(aibot)
+            collision: bool = world.collide(player_1, aibot)
+            # If collision, punish the aibot and remove it
+            if collision:
+                genomes_list[aibots_list.index(aibot)].fitness -= 5
+                neural_nets_list.pop(aibots_list.index(aibot))
+                genomes_list.pop(aibots_list.index(aibot))
+                aibots_list.pop(aibots_list.index(aibot))
+
+        # Draw Players
         pygame.draw.circle(game_window.screen, player_1.color, (player_1.x, player_1.y), player_1.size)
 
-        # AIBots
-        pygame.draw.circle(game_window.screen, aibot_1.color, (aibot_1.x, aibot_1.y), aibot_1.size)
+        # Draw AIBots
+        for aibot in aibots_list:
+            pygame.draw.circle(game_window.screen, aibot.color, (aibot.x, aibot.y), aibot.size)
+
+        # Draw text
+        ## Time
+        draw_text(f"Time: {int(time_s)}", becode_color, (game_window.width_px - 100, 100))
+
+        ## current generations
+        draw_text(f"Generation: {generation}", becode_color, (game_window.width_px/2, 100))
+
+        # Number of AIBots alive
+        draw_text(f"Alive: {len(aibots_list)}", becode_color, (game_window.width_px/2, 200))
 
 
         # Update the screen with the drawings
@@ -322,76 +397,92 @@ def game() -> None:
         main_clock.tick(framerate_limit) # Limit the frame rate to max the framerate_limit
 
 
-#============================================================
-# Set up the stage
-#============================================================
+def run(config_file):
+    """
+    runs the NEAT algorithm to train a neural network to play flappy bird.
+    :param config_file: location of config file
+    :return: None
+    """
+    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                                neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                config_file)
 
-# Globals
-global game_window, game_font, player_1, world
+    # Create the population, which is the top-level object for a NEAT run.
+    p = neat.Population(config)
 
-# CONSTANTS
-WINDOW_WIDTH_PX = 1440
-WINDOW_HEIGHT_PX = 900
-CAPTION = "Enter the Pygame"
+    # Add a stdout reporter to show progress in the terminal.
+    p.add_reporter(neat.StdOutReporter(True))  # DD: this gets some stats
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+    # p.add_reporter(neat.Checkpointer(5))
 
-# Variables
-framerate_limit = 120
+    # Run for up to 50 generations.
+    winner = p.run(game, 50)
 
-# Setup
-pygame.init() # initiate pygame
-pygame.font.init()  # initiate font
-game_font = pygame.font.SysFont("comicsans", 50)
-# end_font = pygame.font.SysFont("comicsans", 70)
-# game_font = pygame.font.Font('04B_19.ttf',40) # create a font (style, size)
-
-# Display
-game_window = GameWindow((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), CAPTION)
-game_window.display_caption()
-
-# Sound
-
-
-# Clock
-main_clock = pygame.time.Clock() # instantiate clock to limit the frame rate
-
-
-# Instantiate environment
-world = Environment((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), color=(255,255,255))
-# Instantiate player
-# player_1 = Player(20, (1,1),'Yoyo', (255,0,0))
-player_1 = Player((100, world.height/2), size=50, mass=100, name="John Titor", color=(22,35,46))
-
-# Instantiate local client who will control player_1
-client_1 = Client(player_1)
-
-# Instantiate aibots
-aibot_1 = AIBots((world.width - 100, world.height/2), size=50, mass=1)
-
-# Instantiate gorilla
-gorilla = Gorilla("gamecore/assets/images/gorilla.png", (game_window.width_px,game_window.height_px))
-## convert() converts the image into a format easier for pygame => faster
-## alpha() otherwise pygame paints black where the image is empty/transparent
-gorilla.image = pygame.image.load(gorilla.image_path).convert_alpha()
-gorilla.image_flip = pygame.image.load(gorilla.image_path).convert_alpha()
-gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False) # flip the gorilla horizontally
-# import gorilla sounds
-gorilla.sounds = pygame.mixer.Sound("gamecore/assets/sounds/gorilla_sounds.mp3")
-
-# Start screen
-levels_list = create_levels()
-
+    # show final stats
+    print('\nBest genome:\n{!s}'.format(winner))
 
 #============================================================
 # Run
 #============================================================
 
 if __name__ == '__main__':
-    # Determine path to configuration file. This path manipulation is
-    # here so that the script will run successfully regardless of the
-    # current working directory.
-    # local_dir = os.path.dirname(__file__)
-    # config_path = os.path.join(local_dir, 'config-feedforward.txt')
-    # run(config_path)
+
+    # Globals
+    # global game_window, game_font, player_1, world
+    # global generation
+
+    # CONSTANTS
+    WINDOW_WIDTH_PX = 1440
+    WINDOW_HEIGHT_PX = 900
+    CAPTION = "Enter the Pygame"
+
+    # Variables
+    framerate_limit = 120
+    generation = 0
+    slide_font_color = (255,255,255)
+    becode_color = (22,35,46)
+
+    # Setup
+    pygame.init() # initiate pygame
+    pygame.font.init()  # initiate font
+    game_font = pygame.font.SysFont("comicsans", 50)
+    # end_font = pygame.font.SysFont("comicsans", 70)
+    # game_font = pygame.font.Font('04B_19.ttf',40) # create a font (style, size)
+
+    # Display
+    game_window = GameWindow((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), CAPTION)
+    game_window.display_caption()
+
+    # Clock
+    main_clock = pygame.time.Clock() # instantiate clock to limit the frame rate
+
+    # Instantiate environment
+    world = Environment((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), color=(255,255,255))
+    # Instantiate player
+    # player_1 = Player(20, (1,1),'Yoyo', (255,0,0))
+    player_1 = Player((100, world.height/2), size=50, mass=100, name="John Titor", color=becode_color)
+
+    # Instantiate local client who will control player_1
+    client_1 = Client(player_1)
+
+    # Instantiate gorilla
+    gorilla = Gorilla("gamecore/assets/images/gorilla.png", (game_window.width_px,game_window.height_px))
+    ## convert() converts the image into a format easier for pygame => faster
+    ## alpha() otherwise pygame paints black where the image is empty/transparent
+    gorilla.image = pygame.image.load(gorilla.image_path).convert_alpha()
+    gorilla.image_flip = pygame.image.load(gorilla.image_path).convert_alpha()
+    gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False) # flip the gorilla horizontally
+    # import gorilla sounds
+    gorilla.sounds = pygame.mixer.Sound("gamecore/assets/sounds/gorilla_sounds.mp3")
+
+    # Create levels
+    levels_list = create_levels()
+    
+    # Start screen
     start_screen()
-    game()
+
+    # Start game
+    config_path = "gamecore/config-feedforward.txt"
+    run(config_path)
     terminate()

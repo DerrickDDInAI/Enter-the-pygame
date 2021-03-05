@@ -4,6 +4,7 @@
 
 # from pygame import math
 import math
+from typing import Tuple
 
 class Environment:
     """
@@ -69,10 +70,12 @@ class Environment:
         self.accelerate(player_1, (theta - 0.5 * math.pi, force/player_1.mass))
         self.accelerate(player_2, (theta + 0.5 * math.pi, force/player_2.mass))
 
-    def collide(self, player_1, player_2):
+    def collide(self, player_1, player_2) -> bool:
         """
         Function to check if collision between 2 players
         and if collision, make them bounce.
+
+        Returns: True if collision
         """
         distance_x = player_1.x - player_2.x
         distance_y = player_1.y - player_2.y
@@ -102,23 +105,32 @@ class Environment:
             player_1.y -= math.cos(angle) * overlap
             player_2.x -= math.sin(angle) * overlap
             player_2.y += math.cos(angle) * overlap
+        
+            return True
 
-    def bounce(self, player):
+    def bounce(self, player) -> Tuple[bool,bool]:
         """
         Function to check if a player hits the environment boundary
-        and if so, make it bounce.        
+        and if so, make it bounce.
+
+        Returns: a tuple of booleans True if the player hits one of the border       
         """
+        # hit_x = False
+        # hit_y = False
+
         # if player crosses left border:
         if player.x < player.size:
             player.x = 2 * player.size - player.x
             player.angle = - player.angle
             player.speed *= self.elasticity
-        
+            # hit_x = True
+
         # if player crosses right border:
         elif player.x > self.width - player.size:
             player.x = 2 * (self.width - player.size) - player.x
             player.angle = - player.angle
             player.speed *= self.elasticity
+            # hit_x = True
 
         # if player crosses top border:
         if player.y < player.size:

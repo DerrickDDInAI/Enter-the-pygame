@@ -368,8 +368,8 @@ def game(genomes, config) -> None:
             # genomes_list[i].fitness -= 0.1
 
         # get_ai_decision()
-        # Give its location and its distance compared to player and neural network will output a list of values
-        # From  which it can determine in which direction to move
+        # Give its location and its distance compared to player => neural network will output a list of values
+        # From which it can determine in which direction to move
         # Use a tanh activation function to have the output results between -1 and 1
             output: list = neural_nets_list[i].activate((aibot.x, aibot.y, abs(
                 aibot.x - client_1.player.x), abs(aibot.y - client_1.player.y)))
@@ -401,34 +401,41 @@ def game(genomes, config) -> None:
                 genomes_list[i].fitness -= 3
 
             collide_player: bool = world.collide(player_1, aibot)
-            for obstacle in obstacles_list:
-                collide_obstacle_aibot: bool = world.collide(obstacle, aibot)
-                # If collision, punish the aibot and remove it
-                if collide_player or collide_obstacle_aibot:
-                    genomes_list[aibots_list.index(aibot)].fitness -= 5
-                    neural_nets_list.pop(aibots_list.index(aibot))
-                    genomes_list.pop(aibots_list.index(aibot))
-                    aibots_list.pop(aibots_list.index(aibot))
-                    break
+            # for obstacle in obstacles_list:
+            #     collide_obstacle_aibot: bool = world.collide(obstacle, aibot)
+            #     # If collision, punish the aibot and remove it
+            #     if collide_player or collide_obstacle_aibot:
+            #         genomes_list[aibots_list.index(aibot)].fitness -= 5
+            #         neural_nets_list.pop(aibots_list.index(aibot))
+            #         genomes_list.pop(aibots_list.index(aibot))
+            #         aibots_list.pop(aibots_list.index(aibot))
+            #         break
+            
+            # If collision, punish the aibot and remove it
+            if collide_player:
+                genomes_list[aibots_list.index(aibot)].fitness -= 5
+                neural_nets_list.pop(aibots_list.index(aibot))
+                genomes_list.pop(aibots_list.index(aibot))
+                aibots_list.pop(aibots_list.index(aibot))
 
         player_1.move()
         world.add_air_resistance(player_1)
         world.bounce(player_1)
 
-        for obstacle in obstacles_list:
-            # obstacle.move()
-            world.add_air_resistance(obstacle)
-            world.collide(obstacle, player_1)
-            world.bounce(obstacle)
-            # Limits obstacle's speed
-            if obstacle.speed > 20:
-                obstacle.speed = 20
+        # for obstacle in obstacles_list:
+        #     # obstacle.move()
+        #     world.add_air_resistance(obstacle)
+        #     world.collide(obstacle, player_1)
+        #     world.bounce(obstacle)
+        #     # Limits obstacle's speed
+        #     if obstacle.speed > 20:
+        #         obstacle.speed = 20
 
             
         # Draw Obstacles
-        for obstacle in obstacles_list:
-            pygame.draw.circle(game_window.screen, obstacle.color,
-                               (obstacle.x, obstacle.y), obstacle.size)
+        # for obstacle in obstacles_list:
+        #     pygame.draw.circle(game_window.screen, obstacle.color,
+        #                        (obstacle.x, obstacle.y), obstacle.size)
 
         # Draw Players
         pygame.draw.circle(game_window.screen, player_1.color,
@@ -535,15 +542,15 @@ if __name__ == '__main__':
     client_1 = Client(player_1)
 
     # Instantiate obstacles
-    obstacles_list: List[Obstacle] = []
-    min_size: int = 30
-    max_size: int = 50
-    for _ in range(10):
-        obstacle = Obstacle((random.uniform(0, world.width), random.uniform(
-            0, world.height)), size=random.uniform(min_size, max_size), mass=50)
-        # Assign rectangle: pygame.Rect(left, top, width, height)
-        # obstacle.rect = pygame.Rect(obstacle.x, obstacle.y, random.uniform(obstacle_min_size, world.width/10), random.uniform(obstacle_min_size, world.width/10))
-        obstacles_list.append(obstacle)
+    # obstacles_list: List[Obstacle] = []
+    # min_size: int = 30
+    # max_size: int = 50
+    # for _ in range(10):
+    #     obstacle = Obstacle((random.uniform(0, world.width), random.uniform(
+    #         0, world.height)), size=random.uniform(min_size, max_size), mass=50)
+    #     # Assign rectangle: pygame.Rect(left, top, width, height)
+    #     # obstacle.rect = pygame.Rect(obstacle.x, obstacle.y, random.uniform(obstacle_min_size, world.width/10), random.uniform(obstacle_min_size, world.width/10))
+    #     obstacles_list.append(obstacle)
 
     # Instantiate gorilla
     gorilla = Gorilla("gamecore/assets/images/gorilla.png",

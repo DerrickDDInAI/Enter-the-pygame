@@ -346,7 +346,7 @@ def game(genomes, config) -> None:
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         neural_nets_list.append(net)
         # create an aibot with specific size and starting at random y position within boundaries included
-        aibot_size = 25
+        aibot_size = 10
         # aibot_y = random.uniform(aibot_size, world.height - aibot_size)
         aibot_y = world.height/2
         aibots_list.append(
@@ -379,9 +379,9 @@ def game(genomes, config) -> None:
         # game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
         # game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0))
 
-        # Punish each AIBot a fitness of 0.1 for each frame it stays alive
+        # Reward each AIBot a fitness of 0.1 for each frame it stays alive
         for i, aibot in enumerate(aibots_list):
-            # genomes_list[i].fitness -= 0.1
+            genomes_list[i].fitness += 0.1
 
         # get_ai_decision()
         # Give its location and its distance compared to player => neural network will output a list of values
@@ -416,7 +416,7 @@ def game(genomes, config) -> None:
                 abs(aibot.y - client_1.player.y)
                 ]
             input_list.extend(distances_to_obstacles)
-            # print(len(input_list)) # should be 4 + (2*99) = 200
+            # print(len(input_list)) # should be 4 + (2*30)
             output: list = neural_nets_list[i].activate(input_list)
 
             # if output[0] > 0.5: go left
@@ -440,14 +440,15 @@ def game(genomes, config) -> None:
             aibot.move()
             world.add_air_resistance(aibot)
             world.attraction(player_1, aibot)
-            bounce: bool = world.bounce(aibot)
+            world.bounce(aibot)
+            # bounce: bool = world.bounce(aibot)
             # If hits a border, punish the aibot to prevent him from just staying at the border
-            if bounce:
-                genomes_list[i].fitness -= 3
+            # if bounce:
+            #     genomes_list[i].fitness -= 3
 
-            collide_player: bool = world.collide(player_1, aibot)
+            collide_player: bool = world.collide(player_1, aibot, False)
             for obstacle in obstacles_list:
-                collide_obstacle_aibot: bool = world.collide(obstacle, aibot)
+                collide_obstacle_aibot: bool = world.collide(obstacle, aibot, True)
                 # If collision, punish the aibot and remove it
                 if collide_player or collide_obstacle_aibot:
                     genomes_list[aibots_list.index(aibot)].fitness -= 5
@@ -457,7 +458,7 @@ def game(genomes, config) -> None:
                     break
             
             # for other_aibot in aibots_list[i+1:len(aibots_list) - 1]:
-            #     collide_otherbot: bool = world.collide(aibot, other_aibot)
+            #     collide_otherbot: bool = world.collide(aibot, other_aibot, True)
             #     if collide_otherbot:
             #         genomes_list[aibots_list.index(aibot)].fitness -= 3
             #         genomes_list[aibots_list.index(other_aibot)].fitness -= 3
@@ -474,13 +475,13 @@ def game(genomes, config) -> None:
         world.bounce(player_1)
 
         for obstacle in obstacles_list:
-            # obstacle.move()
+            obstacle.move()
             world.add_air_resistance(obstacle)
-            world.collide(obstacle, player_1)
+            world.collide(obstacle, player_1, True)
             world.bounce(obstacle)
             # Limits obstacle's speed
-            # if obstacle.speed > 20:
-            #     obstacle.speed = 20
+            if obstacle.speed > 20:
+                obstacle.speed = 20
 
             
         # Draw Obstacles
@@ -586,7 +587,7 @@ if __name__ == '__main__':
                         color=(255, 255, 255))
     # Instantiate player
     # player_1 = Player(20, (1,1),'Yoyo', (255,0,0))
-    player_1 = Player((100, world.height/2), size=50, mass=100,
+    player_1 = Player((100, world.height/2), size=20, mass=100,
                       name="John Titor", color=becode_color)
 
     # Instantiate local client who will control player_1
@@ -594,9 +595,9 @@ if __name__ == '__main__':
 
     # Instantiate obstacles
     obstacles_list: List[Obstacle] = []
-    min_size: int = 30
-    max_size: int = 50
-    for _ in range(10):
+    min_size: int = 10
+    max_size: int = 20
+    for _ in range(30):
         obstacle = Obstacle((random.uniform(0, world.width), random.uniform(
             0, world.height)), size=random.uniform(min_size, max_size), mass=50)
         # Assign rectangle: pygame.Rect(left, top, width, height)
@@ -620,7 +621,7 @@ if __name__ == '__main__':
     levels_list = create_levels()
 
     # Start screen
-    start_screen()
+    # start_screen()
 
     # Start game
     config_path = "gamecore/config-feedforward.txt"

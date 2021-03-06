@@ -73,10 +73,10 @@ class Environment:
         self.accelerate(player_1, (theta - 0.5 * math.pi, force/player_1.mass))
         self.accelerate(player_2, (theta + 0.5 * math.pi, force/player_2.mass))
 
-    def collide(self, player_1, player_2) -> bool:
+    def collide(self, player_1, player_2, apply: bool) -> bool:
         """
         Function to check if collision between 2 players
-        and if collision, make them bounce.
+        and if collision and apply is True, make them bounce.
 
         Returns: True if collision
         """
@@ -85,35 +85,36 @@ class Environment:
         distance = math.hypot(distance_x, distance_y)
 
         # if distance < sum of players' radius, it means collision
-        if distance < player_1.size + player_2.size:
-            angle = math.atan2(distance_y, distance_x) + 0.5 * math.pi
-            total_mass = player_1.mass + player_2.mass
+        if (distance < player_1.size + player_2.size):
+            if apply:
+                angle = math.atan2(distance_y, distance_x) + 0.5 * math.pi
+                total_mass = player_1.mass + player_2.mass
 
-            player_1_vector_a = (
-                player_1.angle, player_1.speed * (player_1.mass - player_2.mass) / total_mass)
-            player_1_vector_b = (
-                angle, 2 * player_2.speed * player_2.mass / total_mass)
-            player_1.angle, player_1.speed = self.add_vectors(
-                player_1_vector_a, player_1_vector_b)
+                player_1_vector_a = (
+                    player_1.angle, player_1.speed * (player_1.mass - player_2.mass) / total_mass)
+                player_1_vector_b = (
+                    angle, 2 * player_2.speed * player_2.mass / total_mass)
+                player_1.angle, player_1.speed = self.add_vectors(
+                    player_1_vector_a, player_1_vector_b)
 
-            player_2_vector_a = (
-                player_2.angle, player_2.speed * (player_2.mass - player_1.mass) / total_mass)
-            player_2_vector_b = (angle + math.pi, 2 *
-                                 player_1.speed * player_1.mass / total_mass)
-            player_2.angle, player_2.speed = self.add_vectors(
-                player_2_vector_a, player_2_vector_b)
+                player_2_vector_a = (
+                    player_2.angle, player_2.speed * (player_2.mass - player_1.mass) / total_mass)
+                player_2_vector_b = (angle + math.pi, 2 *
+                                    player_1.speed * player_1.mass / total_mass)
+                player_2.angle, player_2.speed = self.add_vectors(
+                    player_2_vector_a, player_2_vector_b)
 
-            elasticity = player_1.elasticity * player_2.elasticity
-            player_1.speed *= elasticity
-            player_2.speed *= elasticity
+                elasticity = player_1.elasticity * player_2.elasticity
+                player_1.speed *= elasticity
+                player_2.speed *= elasticity
 
-            # At the time we detect the collision, the players circles could possibly overlap
-            # We correct their positions to remove this overlap
-            overlap = 0.5 * (player_1.size + player_2.size - distance + 1)
-            player_1.x += math.sin(angle) * overlap
-            player_1.y -= math.cos(angle) * overlap
-            player_2.x -= math.sin(angle) * overlap
-            player_2.y += math.cos(angle) * overlap
+                # At the time we detect the collision, the players circles could possibly overlap
+                # We correct their positions to remove this overlap
+                overlap = 0.5 * (player_1.size + player_2.size - distance + 1)
+                player_1.x += math.sin(angle) * overlap
+                player_1.y -= math.cos(angle) * overlap
+                player_2.x -= math.sin(angle) * overlap
+                player_2.y += math.cos(angle) * overlap
 
             return True
 

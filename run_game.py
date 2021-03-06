@@ -208,11 +208,15 @@ def start_screen() -> None:
     """
     # Variables
     start_screen = True
+    time_s: float = 0.0
     current_level_index = 0
     current_story_event = -1  # title slide just before gorilla speaks
+    transition_color = list(becode_color) # to turn the screen whiter every second
 
     while start_screen:
-
+        # Get the delta t for one frame (this changes depending on system load).
+        dt_s = float(main_clock.tick(framerate_limit) * 1e-3)
+        
         # Get user input
         user_input = client_1.wait_for_pressed_key()
 
@@ -284,15 +288,25 @@ def start_screen() -> None:
 
         # 6. Gorilla turn its back and leaves the screen from the right
         elif current_story_event == 13:
-            # fill the screen with white
-            game_window.screen.fill((255, 255, 255))
+            game_window.screen.fill(becode_color)
             gorilla.move()
             game_window.screen.blit(gorilla.image_flip, (
                 gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
             gorilla.sounds.play()
 
-        # Quit the start screen loop
+        # Transition before quitting the start screen loop
         elif current_story_event == 14:
+            
+            # Turn the screen whiter every second
+            if time_s > 0.001:
+                for i, color in enumerate(transition_color):
+                    if transition_color[i] < 255:
+                        transition_color[i] += 1
+                time_s = 0.0 # reset timer
+            game_window.screen.fill(transition_color)
+        
+        # Quit the start screen loop
+        elif current_story_event == 15:
             # stop gorilla sounds
             gorilla.sounds.stop()
             start_screen = False
@@ -301,6 +315,7 @@ def start_screen() -> None:
         pygame.display.update()
 
         # Time
+        time_s += dt_s  # Measure time spent
         # Limit the frame rate to max the framerate_limit
         main_clock.tick(framerate_limit)
 
@@ -332,7 +347,8 @@ def game(genomes, config) -> None:
         neural_nets_list.append(net)
         # create an aibot with specific size and starting at random y position within boundaries included
         aibot_size = 25
-        aibot_y = random.uniform(aibot_size, world.height - aibot_size)
+        # aibot_y = random.uniform(aibot_size, world.height - aibot_size)
+        aibot_y = world.height/2
         aibots_list.append(
             AIBots((world.width - 100, aibot_y), size=aibot_size, mass=50))
         genomes_list.append(genome)
@@ -371,8 +387,37 @@ def game(genomes, config) -> None:
         # Give its location and its distance compared to player => neural network will output a list of values
         # From which it can determine in which direction to move
         # Use a tanh activation function to have the output results between -1 and 1
-            output: list = neural_nets_list[i].activate((aibot.x, aibot.y, abs(
-                aibot.x - client_1.player.x), abs(aibot.y - client_1.player.y)))
+            # output: list = neural_nets_list[i].activate((aibot.x, aibot.y, abs(
+            #     aibot.x - client_1.player.x), abs(aibot.y - client_1.player.y)))
+            
+            # As input: its location and its distance compared to player and other bots
+            # distance_between_bots = []
+            # for j, other_aibot in enumerate(aibots_list):
+            #     if i != j:
+            #         distance_between_bots.extend([abs(aibot.x - other_aibot.x), abs(aibot.y - other_aibot.y)])
+            
+            # input_list: list = [aibot.x,
+            #     aibot.y,
+            #     abs(aibot.x - client_1.player.x),
+            #     abs(aibot.y - client_1.player.y)
+            #     ]
+            # input_list.extend(distance_between_bots)
+            # # print(len(input_list)) # should be 4 + (2*99) = 200
+            # output: list = neural_nets_list[i].activate(input_list)
+
+            # As input: its location and its distance compared to player and obstacles
+            distances_to_obstacles = []
+            for obstacle in obstacles_list:
+                distances_to_obstacles.extend([abs(aibot.x - obstacle.x), abs(aibot.y - obstacle.y)])
+            
+            input_list: list = [aibot.x,
+                aibot.y,
+                abs(aibot.x - client_1.player.x),
+                abs(aibot.y - client_1.player.y)
+                ]
+            input_list.extend(distances_to_obstacles)
+            # print(len(input_list)) # should be 4 + (2*99) = 200
+            output: list = neural_nets_list[i].activate(input_list)
 
             # if output[0] > 0.5: go left
             if output[0] > 0.5:
@@ -401,41 +446,47 @@ def game(genomes, config) -> None:
                 genomes_list[i].fitness -= 3
 
             collide_player: bool = world.collide(player_1, aibot)
-            # for obstacle in obstacles_list:
-            #     collide_obstacle_aibot: bool = world.collide(obstacle, aibot)
-            #     # If collision, punish the aibot and remove it
-            #     if collide_player or collide_obstacle_aibot:
-            #         genomes_list[aibots_list.index(aibot)].fitness -= 5
-            #         neural_nets_list.pop(aibots_list.index(aibot))
-            #         genomes_list.pop(aibots_list.index(aibot))
-            #         aibots_list.pop(aibots_list.index(aibot))
-            #         break
+            for obstacle in obstacles_list:
+                collide_obstacle_aibot: bool = world.collide(obstacle, aibot)
+                # If collision, punish the aibot and remove it
+                if collide_player or collide_obstacle_aibot:
+                    genomes_list[aibots_list.index(aibot)].fitness -= 5
+                    neural_nets_list.pop(aibots_list.index(aibot))
+                    genomes_list.pop(aibots_list.index(aibot))
+                    aibots_list.pop(aibots_list.index(aibot))
+                    break
             
+            # for other_aibot in aibots_list[i+1:len(aibots_list) - 1]:
+            #     collide_otherbot: bool = world.collide(aibot, other_aibot)
+            #     if collide_otherbot:
+            #         genomes_list[aibots_list.index(aibot)].fitness -= 3
+            #         genomes_list[aibots_list.index(other_aibot)].fitness -= 3
+
             # If collision, punish the aibot and remove it
-            if collide_player:
-                genomes_list[aibots_list.index(aibot)].fitness -= 5
-                neural_nets_list.pop(aibots_list.index(aibot))
-                genomes_list.pop(aibots_list.index(aibot))
-                aibots_list.pop(aibots_list.index(aibot))
+            # if collide_player:
+            #     genomes_list[aibots_list.index(aibot)].fitness -= 5
+            #     neural_nets_list.pop(aibots_list.index(aibot))
+            #     genomes_list.pop(aibots_list.index(aibot))
+            #     aibots_list.pop(aibots_list.index(aibot))
 
         player_1.move()
         world.add_air_resistance(player_1)
         world.bounce(player_1)
 
-        # for obstacle in obstacles_list:
-        #     # obstacle.move()
-        #     world.add_air_resistance(obstacle)
-        #     world.collide(obstacle, player_1)
-        #     world.bounce(obstacle)
-        #     # Limits obstacle's speed
-        #     if obstacle.speed > 20:
-        #         obstacle.speed = 20
+        for obstacle in obstacles_list:
+            # obstacle.move()
+            world.add_air_resistance(obstacle)
+            world.collide(obstacle, player_1)
+            world.bounce(obstacle)
+            # Limits obstacle's speed
+            # if obstacle.speed > 20:
+            #     obstacle.speed = 20
 
             
         # Draw Obstacles
-        # for obstacle in obstacles_list:
-        #     pygame.draw.circle(game_window.screen, obstacle.color,
-        #                        (obstacle.x, obstacle.y), obstacle.size)
+        for obstacle in obstacles_list:
+            pygame.draw.circle(game_window.screen, obstacle.color,
+                               (obstacle.x, obstacle.y), obstacle.size)
 
         # Draw Players
         pygame.draw.circle(game_window.screen, player_1.color,
@@ -542,15 +593,15 @@ if __name__ == '__main__':
     client_1 = Client(player_1)
 
     # Instantiate obstacles
-    # obstacles_list: List[Obstacle] = []
-    # min_size: int = 30
-    # max_size: int = 50
-    # for _ in range(10):
-    #     obstacle = Obstacle((random.uniform(0, world.width), random.uniform(
-    #         0, world.height)), size=random.uniform(min_size, max_size), mass=50)
-    #     # Assign rectangle: pygame.Rect(left, top, width, height)
-    #     # obstacle.rect = pygame.Rect(obstacle.x, obstacle.y, random.uniform(obstacle_min_size, world.width/10), random.uniform(obstacle_min_size, world.width/10))
-    #     obstacles_list.append(obstacle)
+    obstacles_list: List[Obstacle] = []
+    min_size: int = 30
+    max_size: int = 50
+    for _ in range(10):
+        obstacle = Obstacle((random.uniform(0, world.width), random.uniform(
+            0, world.height)), size=random.uniform(min_size, max_size), mass=50)
+        # Assign rectangle: pygame.Rect(left, top, width, height)
+        # obstacle.rect = pygame.Rect(obstacle.x, obstacle.y, random.uniform(obstacle_min_size, world.width/10), random.uniform(obstacle_min_size, world.width/10))
+        obstacles_list.append(obstacle)
 
     # Instantiate gorilla
     gorilla = Gorilla("gamecore/assets/images/gorilla.png",

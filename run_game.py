@@ -539,7 +539,7 @@ def game_2(genomes, config) -> None:
     # Variables
     game_running: bool = True  # Game loop
     time_s: float = 0.0
-    timer: float = 50.0
+    timer: float = 3.0
     score_left: int = 0
     score_right: int = 0
     score_left_bool: bool = False
@@ -556,6 +556,7 @@ def game_2(genomes, config) -> None:
     neural_nets_list: list = []
 
     for genome_id, genome in genomes:
+        print(genome_id)
         genome.fitness = 0  # AIBot starts the game with fitness score at 0
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         neural_nets_list.append(net)
@@ -602,7 +603,8 @@ def game_2(genomes, config) -> None:
         # From which it can determine in which direction to move
         # Use a tanh activation function to have the output results between -1 and 1
             # As input: its location and its distance compared to other bots
-            input_list: list = [gorilla_left.x, gorilla_left.y, gorilla_right.x, gorilla_right.y]
+            # input_list: list = [gorilla_left.x, gorilla_left.y, gorilla_right.x, gorilla_right.y]
+            input_list: list = []
             distance_between_bots = []
             for j, other_aibot in enumerate(aibots_list):
                 if i != j:
@@ -612,9 +614,10 @@ def game_2(genomes, config) -> None:
 
             # Add input: its distance compared to obstacles
             distances_to_obstacles = []
+            distances_obst_goal = []
             for obstacle in obstacles_list:
                 distances_to_obstacles.extend([abs(aibot.x - obstacle.x), abs(aibot.y - obstacle.y)])
-            
+                distances_obst_goal.extend([obstacle.x, obstacle.y])
             input_list.extend(distances_to_obstacles)
             
             output: list = neural_nets_list[i].activate(input_list)
@@ -633,10 +636,6 @@ def game_2(genomes, config) -> None:
                 aibot.angle, aibot.speed = world.add_vectors(
                     (aibot.angle, aibot.speed), (math.pi, 2))
 
-            # Limits aibot's speed
-            if aibot.speed > 20:
-                aibot.speed = 20
-
             aibot.move()
             world.add_air_resistance(aibot)
             world.attraction(player_1, aibot)
@@ -645,6 +644,16 @@ def game_2(genomes, config) -> None:
             # If hits a border, punish the aibot to prevent him from just staying at the border
             # if bounce:
             #     genomes_list[i].fitness -= 3
+            for j, other_aibot in enumerate(aibots_list):
+                if i != j:
+                    world.collide(aibot, other_aibot, True)
+                    # if collide_otherbot:
+                    #     genomes_list[aibots_list.index(aibot)].fitness -= 1
+                    #     # genomes_list[aibots_list.index(other_aibot)].fitness -= 1
+            
+            # Limits aibot's speed
+            if aibot.speed > 20:
+                aibot.speed = 20
 
             for obstacle in obstacles_list:
                 obstacle.move()
@@ -656,49 +665,80 @@ def game_2(genomes, config) -> None:
                     genomes_list[aibots_list.index(aibot)].fitness += 2
                 
                 # Check if obstacle collides with gorilla_right or gorilla_left
-                distance_gorilla_right = (round(obstacle.x - gorilla_right.x), round(obstacle.y - gorilla_right.y))
-                distance_gorilla_left = (round(obstacle.x - gorilla_right.x), round(obstacle.y - gorilla_right.y))
-                obstacle_rect = pygame.draw.circle(game_window.screen, obstacle.color,
-                (obstacle.x, obstacle.y), obstacle.size)
-                obstacle_rect = pygame.mask.Mask(obstacle_rect.size, True)
-                if gorilla_right.image_mask.overlap(obstacle_rect, distance_gorilla_right) and (i+1)%2 == 0: # and if aibot must shoot at gorilla_right
-                    genomes_list[aibots_list.index(aibot)].fitness += 5
-                    score_left_bool = True # left team scores a goal
-                elif gorilla_right.image_mask.overlap(obstacle_rect, distance_gorilla_right) and (i+1)%2 != 0: # and if aibot must shoot at gorilla_left
-                    genomes_list[aibots_list.index(aibot)].fitness -= 5 # punish as it shoots at wrong gorilla
-                    score_left_bool = True # left team scores a goal
-                if gorilla_left.image_mask.overlap(obstacle_rect, distance_gorilla_left) and (i+1)%2 != 0: # and if aibot must shoot to gorilla_left
-                    genomes_list[aibots_list.index(aibot)].fitness += 5
-                    score_right_bool: True # right team scores a goal
-                elif gorilla_left.image_mask.overlap(obstacle_rect, distance_gorilla_left) and (i+1)%2 == 0: # and if aibot must shoot to gorilla_left
-                    genomes_list[aibots_list.index(aibot)].fitness -= 5 # punish as it shoots at wrong gorilla
-                    score_right_bool: True # right team scores a goal
+                # distance_gorilla_right = (round(obstacle.x - gorilla_right.x), round(obstacle.y - gorilla_right.y))
+                # distance_gorilla_left = (round(obstacle.x - gorilla_left.x), round(obstacle.y - gorilla_left.y))
+                # obstacle_rect = pygame.draw.circle(game_window.screen, obstacle.color,
+                # (obstacle.x, obstacle.y), obstacle.size)
+                # obstacle_rect = pygame.mask.Mask(obstacle_rect.size, True)
+                # if gorilla_right.image_mask.overlap(obstacle_rect, distance_gorilla_right) and (i+1)%2 == 0: # and if aibot must shoot at gorilla_right
+                #     genomes_list[aibots_list.index(aibot)].fitness += 5
+                #     score_left_bool = True # left team scores a goal
+                #     print("yes")
+                # elif gorilla_right.image_mask.overlap(obstacle_rect, distance_gorilla_right) and (i+1)%2 != 0: # and if aibot must shoot at gorilla_left
+                #     genomes_list[aibots_list.index(aibot)].fitness -= 5 # punish as it shoots at wrong gorilla
+                #     score_left_bool = True # left team scores a goal
+                # if gorilla_left.image_mask.overlap(obstacle_rect, distance_gorilla_left) and (i+1)%2 != 0: # and if aibot must shoot to gorilla_left
+                #     genomes_list[aibots_list.index(aibot)].fitness += 5
+                #     score_right_bool: True # right team scores a goal
+                # elif gorilla_left.image_mask.overlap(obstacle_rect, distance_gorilla_left) and (i+1)%2 == 0: # and if aibot must shoot to gorilla_left
+                #     genomes_list[aibots_list.index(aibot)].fitness -= 5 # punish as it shoots at wrong gorilla
+                #     score_right_bool: True # right team scores a goal
+
+                # if gorilla_right.image_mask.overlap(obstacle_rect, distance_gorilla_right):
+                #     score_left_bool = True # left team scores a goal
+                # if gorilla_right.image_mask.overlap(obstacle_rect, distance_gorilla_right):
+                #     score_left_bool = True # left team scores a goal
+                # if gorilla_left.image_mask.overlap(obstacle_rect, distance_gorilla_left):
+                #     score_right_bool = True # right team scores a goal
+                # if gorilla_left.image_mask.overlap(obstacle_rect, distance_gorilla_left):
+                #     score_right_bool = True # right team scores a goal
 
                 # Limits obstacle's speed
                 if obstacle.speed > 20:
                     obstacle.speed = 20
             
-            for other_aibot in aibots_list[i+1:len(aibots_list) - 1]:
-                collide_otherbot: bool = world.collide(aibot, other_aibot, True)
-                if collide_otherbot:
-                    genomes_list[aibots_list.index(aibot)].fitness -= 1
-                    # genomes_list[aibots_list.index(other_aibot)].fitness -= 1
+
+            if obstacle.x >= world.width - obstacle.size - 10:
+                score_left_bool = True # left team scores a goal
+            if obstacle.x <= obstacle.size + 10:
+                score_right_bool = True # right team scores a goal
 
         # if score, reset positions and score states
         if score_left_bool or score_right_bool:
+            print("score")
             if score_left_bool:
                 score_left += 1 # left team scores a goal
+                for i, aibot in enumerate(aibots_list, 1):
+                    if i%2 == 0:
+                        genomes_list[aibots_list.index(aibot)].fitness += 5
+                    else:
+                        genomes_list[aibots_list.index(aibot)].fitness -= 5
                 score_left_bool = False
 
             if score_right_bool:
                 score_right += 1 # right team scores a goal
+                for i, aibot in enumerate(aibots_list, 1):
+                    if i%2 != 0:
+                        genomes_list[aibots_list.index(aibot)].fitness += 5
+                    else:
+                        genomes_list[aibots_list.index(aibot)].fitness -= 5
                 score_right_bool = False
 
             for obstacle in obstacles_list:
                 obstacle.x, obstacle.y = (world.width/2, world.height/2)
+                obstacle.angle = 0
+                obstacle.speed = 0
+
             for i, aibot in enumerate(aibots_list, 1):
                 aibot.x = 100 + (world.width - 200)*(genome_id%2)
                 aibot.y = world.height/2
+                aibot.angle = 0
+                aibot.speed = 0
+
+        # if no score, punish them every second
+        elif time_s >= 1.0:
+            for aibot in aibots_list:
+                genomes_list[aibots_list.index(aibot)].fitness -= 1
 
         # Draw Obstacles
         for obstacle in obstacles_list:
@@ -711,8 +751,8 @@ def game_2(genomes, config) -> None:
                                (aibot.x, aibot.y), aibot.size)
         
         # Draw gorillas (at left and right of the screen and vertically centered)
-        game_window.screen.blit(gorilla_left.image, (0, world.height/2 - gorilla_left.height/2))
-        game_window.screen.blit(gorilla_right.image, (world.width - gorilla_right.width, world.height/2 - gorilla_right.height/2))
+        # game_window.screen.blit(gorilla_left.image, (0, world.height/2 - gorilla_left.height/2))
+        # game_window.screen.blit(gorilla_right.image, (world.width - gorilla_right.width, world.height/2 - gorilla_right.height/2))
 
         # Draw text
         # Time
@@ -825,26 +865,27 @@ if __name__ == '__main__':
     # Instantiate gorillas
     gorilla = Gorilla("gamecore/assets/images/gorilla.png",
                       (game_window.width_px, game_window.height_px))
-    gorilla_left = Gorilla("gamecore/assets/images/gorilla.png",
-                      (0, game_window.height_px/2))
-    gorilla_right = Gorilla("gamecore/assets/images/gorilla.png",
-                      (0, game_window.height_px/2))
-    # convert() converts the image into a format easier for pygame => faster
-    # alpha() otherwise pygame paints black where the image is empty/transparent
-    gorilla.image = pygame.image.load(gorilla.image_path).convert_alpha()
-    gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False)  # flip the gorilla horizontally
-    gorilla_right.image = gorilla.image
-    gorilla_left.image = pygame.transform.flip(gorilla.image, True, False)  # flip the gorilla horizontally
-    gorilla_right.image = pygame.transform.scale(gorilla_right.image, (200,200))
-    gorilla_left.image = pygame.transform.scale(gorilla_left.image, (200,200))
-    gorilla_right.height = gorilla_right.image.get_height()
-    gorilla_left.height = gorilla_left.image.get_height()
-    gorilla_right.width = gorilla_right.image.get_width()
-    gorilla_left.width = gorilla_left.image.get_width()
+    # gorilla_left = Gorilla("gamecore/assets/images/gorilla.png",
+    #                   (0, game_window.height_px/2))
+    # gorilla_right = Gorilla("gamecore/assets/images/gorilla.png",
+    #                   (0, game_window.height_px/2))
+    # # convert() converts the image into a format easier for pygame => faster
+    # # alpha() otherwise pygame paints black where the image is empty/transparent
+    # gorilla.image = pygame.image.load(gorilla.image_path).convert_alpha()
+    # gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False)  # flip the gorilla horizontally
+    # gorilla_right.image = gorilla.image
+    # gorilla_left.image = pygame.transform.flip(gorilla.image, True, False)  # flip the gorilla horizontally
+    # gorilla_right.image = pygame.transform.scale(gorilla_right.image, (200,200))
+    # gorilla_left.image = pygame.transform.scale(gorilla_left.image, (200,200))
+    # gorilla_right.height = gorilla_right.image.get_height()
+    # gorilla_left.height = gorilla_left.image.get_height()
+    # gorilla_right.width = gorilla_right.image.get_width()
+    # gorilla_left.width = gorilla_left.image.get_width()
     
     # Get the mask of gorilla images
-    gorilla_right.image_mask = pygame.mask.from_surface(gorilla_right.image)
-    gorilla_left.image_mask = pygame.mask.from_surface(gorilla_left.image)
+    # gorilla_right.image_mask = pygame.mask.from_surface(gorilla_right.image)
+    # gorilla_left.image_mask = pygame.mask.from_surface(gorilla_left.image)
+    
     # import gorilla sounds
     gorilla.sounds = pygame.mixer.Sound(
         "gamecore/assets/sounds/gorilla_sounds.mp3")

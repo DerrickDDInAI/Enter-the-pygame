@@ -368,7 +368,7 @@ def game_1(genomes, config) -> None:
         # Get user input
         user_input = client_1.get_user_input()
 
-        # Change level if player press return button
+        # Go to next generation if player press return button
         if isinstance(user_input, str):
             # game_running = False
             break
@@ -540,6 +540,15 @@ def game_2(genomes, config) -> None:
     game_running: bool = True  # Game loop
     time_s: float = 0.0
     timer: float = 50.0
+    score_left: int = 0
+    score_right: int = 0
+    score_left_bool: bool = False
+    score_right_bool: bool = False
+    
+    # Set obstacle (= ball in this game) at the center
+    for obstacle in obstacles_list:
+        obstacle.x = world.width/2
+        obstacle.y = world.height/2
 
     # Create empty lists
     genomes_list: list = []
@@ -551,12 +560,12 @@ def game_2(genomes, config) -> None:
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         neural_nets_list.append(net)
         # create an aibot with specific size and starting at random y position within boundaries included
-        aibot_size = 100
+        aibot_size = 50
         aibot_x = 100 + (world.width - 200)*(genome_id%2) # aibot starts at the right of screen if its id is odd and at the left if even
         # aibot_y = random.uniform(aibot_size, world.height - aibot_size)
         aibot_y = world.height/2
         aibots_list.append(
-            AIBots((aibot_x, aibot_y), size=aibot_size, mass=50)) 
+            AIBots((aibot_x, aibot_y), size=aibot_size, mass=50, color=(255*(genome_id%2), 0, 0))) 
         genomes_list.append(genome)
 
     # Enter game loop
@@ -580,6 +589,10 @@ def game_2(genomes, config) -> None:
         # game_window.screen.blit(pygame.transform.scale(levels_list[current_level_index].bg_surface, (game_window.width_px,game_window.height_px)), (0,0))
         # game_window.screen.blit(levels_list[current_level_index].bg_surface, (0,0))
 
+        # Go to next generation if player press return button
+        if isinstance(user_input, str):
+            # game_running = False
+            break
         
         for i, aibot in enumerate(aibots_list):
             # Reward each AIBot a fitness of 0.1 for each frame it stays alive
@@ -650,13 +663,16 @@ def game_2(genomes, config) -> None:
                 obstacle_rect = pygame.mask.Mask(obstacle_rect.size, True)
                 if gorilla_right.image_mask.overlap(obstacle_rect, distance_gorilla_right) and (i+1)%2 == 0: # and if aibot must shoot at gorilla_right
                     genomes_list[aibots_list.index(aibot)].fitness += 5
+                    score_left_bool = True # left team scores a goal
                 elif gorilla_right.image_mask.overlap(obstacle_rect, distance_gorilla_right) and (i+1)%2 != 0: # and if aibot must shoot at gorilla_left
                     genomes_list[aibots_list.index(aibot)].fitness -= 5 # punish as it shoots at wrong gorilla
-                
+                    score_left_bool = True # left team scores a goal
                 if gorilla_left.image_mask.overlap(obstacle_rect, distance_gorilla_left) and (i+1)%2 != 0: # and if aibot must shoot to gorilla_left
                     genomes_list[aibots_list.index(aibot)].fitness += 5
+                    score_right_bool: True # right team scores a goal
                 elif gorilla_left.image_mask.overlap(obstacle_rect, distance_gorilla_left) and (i+1)%2 == 0: # and if aibot must shoot to gorilla_left
                     genomes_list[aibots_list.index(aibot)].fitness -= 5 # punish as it shoots at wrong gorilla
+                    score_right_bool: True # right team scores a goal
 
                 # Limits obstacle's speed
                 if obstacle.speed > 20:
@@ -668,7 +684,22 @@ def game_2(genomes, config) -> None:
                     genomes_list[aibots_list.index(aibot)].fitness -= 1
                     # genomes_list[aibots_list.index(other_aibot)].fitness -= 1
 
-            
+        # if score, reset positions and score states
+        if score_left_bool or score_right_bool:
+            if score_left_bool:
+                score_left += 1 # left team scores a goal
+                score_left_bool = False
+
+            if score_right_bool:
+                score_right += 1 # right team scores a goal
+                score_right_bool = False
+
+            for obstacle in obstacles_list:
+                obstacle.x, obstacle.y = (world.width/2, world.height/2)
+            for i, aibot in enumerate(aibots_list, 1):
+                aibot.x = 100 + (world.width - 200)*(genome_id%2)
+                aibot.y = world.height/2
+
         # Draw Obstacles
         for obstacle in obstacles_list:
             pygame.draw.circle(game_window.screen, obstacle.color,
@@ -680,12 +711,12 @@ def game_2(genomes, config) -> None:
                                (aibot.x, aibot.y), aibot.size)
         
         # Draw gorillas (at left and right of the screen and vertically centered)
-        game_window.screen.blit(gorilla_left.image, (gorilla_left.width, world.height/2 - gorilla_left.height/2))
+        game_window.screen.blit(gorilla_left.image, (0, world.height/2 - gorilla_left.height/2))
         game_window.screen.blit(gorilla_right.image, (world.width - gorilla_right.width, world.height/2 - gorilla_right.height/2))
 
         # Draw text
         # Time
-        draw_text(f"Time: {int(time_s)}", becode_color,
+        draw_text(f"Timer: {int(timer)}", becode_color,
                   (game_window.width_px - 100, 50))
 
         # current generations
@@ -693,7 +724,7 @@ def game_2(genomes, config) -> None:
                   becode_color, (game_window.width_px/2, 50))
 
         # Number of AIBots alive
-        draw_text(f"Alive: {len(aibots_list)}",
+        draw_text(f"Score: {score_left} - {score_right}",
                   becode_color, (game_window.width_px/2, 100))
 
         # Update the screen with the drawings
@@ -702,8 +733,9 @@ def game_2(genomes, config) -> None:
 
         # Time
         time_s += dt_s  # Measure time spent
-        if time_s > 1:
-            timer -= 1
+        if time_s > 1.0:
+            timer -= 1.0
+            time_s = 0.0
         # Limit the frame rate to max the framerate_limit
         main_clock.tick(framerate_limit)
 
@@ -781,9 +813,9 @@ if __name__ == '__main__':
 
     # Instantiate obstacles
     obstacles_list: List[Obstacle] = []
-    min_size: int = 50
-    max_size: int = 70
-    for _ in range(5):
+    min_size: int = 30
+    max_size: int = 30
+    for _ in range(1):
         obstacle = Obstacle((random.uniform(0, world.width), random.uniform(
             0, world.height)), size=random.uniform(min_size, max_size), mass=50)
         # Assign rectangle: pygame.Rect(left, top, width, height)
@@ -810,7 +842,7 @@ if __name__ == '__main__':
     gorilla_right.width = gorilla_right.image.get_width()
     gorilla_left.width = gorilla_left.image.get_width()
     
-    # Get the mask of gorilla image
+    # Get the mask of gorilla images
     gorilla_right.image_mask = pygame.mask.from_surface(gorilla_right.image)
     gorilla_left.image_mask = pygame.mask.from_surface(gorilla_left.image)
     # import gorilla sounds

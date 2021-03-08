@@ -15,11 +15,13 @@ from typing import List, Set, Dict, TypedDict, Tuple, Optional
 
 class Level:
     """
-    Level has 4 attributes: name, level_number, level_type, bg_surface_path 
+    Level has 4 attributes:
     * name: name of the level
     * level_number: level number
-    * level_type: type of the level; there are 2 types of level in this game: "slide" or "game_level"
-    * bg_surface_path: filepath of the background surface image that we'll use to load
+    * level_type: type of the level; there are 2 types of level: "slide" or "game_level"
+    * bg_surface_path: filepath of the background surface image.
+    * bg_color: screen color if no background surface image
+    * font_color: font color of the level
     """
 
     # Class attributes
@@ -30,30 +32,37 @@ class Level:
         self,
         name: str = None,
         level_type: str = "game_level",
-        bg_surface_path: str = None
-    ):
+        bg_surface_path: Optional[str] = None,
+        bg_color: Tuple[int] = (255,255,255),
+        font_color: Tuple[int] = (22, 35, 46)
+    ) -> None:
         """
-        Function to create an instance of Level class
+        Function to create an instance of Level class.
         By default:
         * name is "level_1", then "level_2" if no name is provided
         * level_type is "game_level"
         * bg_surface is None
+        * bg_color is white
+        * font_color is BeCode color
         """
         Level.count_created_levels += 1
-        self.level_number = Level.count_created_levels
+        self.level_number: int = Level.count_created_levels
+        name: str
         if name is None:
             self.name = f"Level_{self.level_number}"
         else:
             self.name = name
         
-        self.level_type = level_type
-        self.bg_surface_path = bg_surface_path
+        self.level_type: str = level_type
+        self.bg_surface_path: str = bg_surface_path
+        self.bg_color = bg_color
+        self.font_color = font_color
 
         Level.levels_list.append(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
-        In order to print the Level instance in the specified format
+        Function to print the Level instance in the specified format.
         """
         return f'Level {self.level_number}: "{self.name}" ({self.level_type})'
 

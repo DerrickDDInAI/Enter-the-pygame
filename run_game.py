@@ -15,7 +15,6 @@ from typing import List, Set, Dict, TypedDict, Tuple, Optional
 
 # Import 3rd party modules
 import pygame
-# from pygame.color import THECOLORS
 import neat
 from pygame.constants import TIMER_RESOLUTION
 
@@ -153,29 +152,33 @@ class Client:
 # ============================================================
 
 
-def create_levels() -> List:
+def create_level(
+    title: str,
+    level_type: str,
+    bg_image_path: Optional[str] = None,
+    bg_color: Optional[Tuple[int]] = None,
+    font_color: Tuple[int] = (22, 35, 46),
+    resize: bool = False) -> Level:
     """
-    Function to create the levels.
+    Function to create a level.
 
-    Return: list of levels
+    Returns: level.
     """
 
-    # 1. Create Level instances
-    title_slide = Level(
-        "Title", "slide", "gamecore/assets/images/title_slide.png")
-    level_1 = Level("A new dimension")
+    # 1. Create Level instance
+    level = Level(title, level_type, bg_surface_path=bg_image_path, bg_color=bg_color, font_color=font_color)
 
-    # 2. Import the background image
-    # convert() is not necessary but converts the image into a format easier for pygame => faster
-    title_slide.bg_surface = pygame.image.load(
-        title_slide.bg_surface_path).convert()
+    # 2. If background image path is given, import it
+    ## convert() is not necessary but converts the image into a format easier for pygame => faster
+    if level.bg_surface_path:
+        level.bg_surface = pygame.image.load(level.bg_surface_path).convert()
 
-    # 3. If necessary, resize the background image
-    title_slide.bg_surface = pygame.transform.scale(
-        title_slide.bg_surface, (game_window.width_px, game_window.height_px))
+    # 3. If resize is True, resize the background image to the game_window size
+    if resize:
+        level.bg_surface = pygame.transform.scale(
+        level.bg_surface, (game_window.width_px, game_window.height_px))
 
-    return Level.levels_list
-
+    return level
 
 def terminate() -> None:
     """
@@ -184,41 +187,56 @@ def terminate() -> None:
     pygame.quit()
     sys.exit()
 
-
-def get_ai_decision():
-    pass
-
-
-def draw_text(text: str, color: Tuple[int, int, int], xy_pos_center: Tuple[int, int]):
+def draw_text(text: str, color: Tuple[int], xy_pos_center_px: Tuple[int]) -> None:
     """
-    Function to display text
-    * param 
-    :text :text to display
-    :color :font color
-    :xy_pos_center (x,y) coordinates of the center of text rectangle
+    Function to display text.
 
+    Parameters:
+    * text: text to display
+    * color: font color
+    * xy_pos_center_px: (x,y) coordinates of the center of text rectangle.
     """
     text_surface = game_font.render(
         text, True, color)  # text, True for anti-aliased text, color in rgb
-    # put the text in a rect to make it easier to display
-    text_rect = text_surface.get_rect(center=xy_pos_center)
+    
+    # Put the text in a rect to make it easier to display
+    text_rect = text_surface.get_rect(center=xy_pos_center_px)
+
+    # Draw the text on the game_window screen
     game_window.screen.blit(text_surface, text_rect)
 
-
-def start_screen() -> None:
+def play_story_event(current_story_event: int, level: Level, gorilla_image: Optional[str]=None) -> None:
     """
-    Function to start at level 0: "Title slide"
+    Function to play the story events.
+    """
+    # Fill the screen with level background color
+    game_window.screen.fill(level.bg_color)
+    draw_text(gorilla.dialogues[current_story_event], level.font_color, (
+        game_window.width_px/2, game_window.height_px/2))
+    gorilla.sounds.play()
+
+    # If gorilla appears on the scene, draw its image or flipped image
+    if gorilla_image == "gorilla_image":
+        game_window.screen.blit(
+            gorilla.image, (gorilla.x_px - gorilla.image.get_width(), gorilla.y_px - gorilla.image.get_height() - 100))
+    elif gorilla_image == "gorilla_image_flip":
+            game_window.screen.blit(gorilla.image_flip, (
+                gorilla.x_px - gorilla.image.get_width(), gorilla.y_px - gorilla.image.get_height() - 100))
+
+def start_screen(level: Level) -> None:
+    """
+    Function to start game at level 0: "Title" (slide).
     """
     # Variables
     start_screen = True
     time_s: float = 0.0
-    current_level_index = 0
     current_story_event = -1  # title slide just before gorilla speaks
-    transition_color = list(becode_color) # to turn the screen whiter every second
+    transition_color = list(level.bg_color) # convert rgb tuple into a list to turn the screen whiter every second
 
+    # Enter game loop
     while start_screen:
         # Get the delta t for one frame (this changes depending on system load).
-        dt_s = float(main_clock.tick(framerate_limit) * 1e-3)
+        dt_s: float = float(main_clock.tick(framerate_limit) * 1e-3)
         
         # Get user input
         user_input = client_1.wait_for_pressed_key()
@@ -226,90 +244,50 @@ def start_screen() -> None:
         # If user_input is a tuple, the user changed the screen size
         if isinstance(user_input, tuple):
             game_window.width_px, game_window.height_px = user_input
-        game_window.screen.blit(pygame.transform.scale(
-            levels_list[current_level_index].bg_surface, (game_window.width_px, game_window.height_px)), (0, 0))
+        game_window.screen.blit(pygame.transform.scale(level.bg_surface, (game_window.width_px, game_window.height_px)), (0, 0))
 
         # If user_input is True, the user pressed a key to go forward in the story
         if user_input == True:
             current_story_event += 1
 
         # 1. Big text appears
-        # if current_start_event == 1:
-        #     game_window.screen.fill(becode_color) # fill the screen with BeCode color
-        #     draw_text(str(round(time_s, 2)), (game_window.width_px/2,game_window.height_px - 20))
-        #     if time_s >= 5 and current_dialogue_index < 2:
-        #         time_s = 0.0 # reset time
-        #         current_dialogue_index += 1
-        #     draw_text(gorilla.dialogues[current_dialogue_index], (game_window.width_px/2,game_window.height_px/2))
-
-        # 1. Big text appears
         if current_story_event in [0, 1, 2]:
-            # fill the screen with BeCode color
-            game_window.screen.fill(becode_color)
-            draw_text(gorilla.dialogues[current_story_event], slide_font_color, (
-                game_window.width_px/2, game_window.height_px/2))
-            gorilla.sounds.play()
+            play_story_event(current_story_event, level)
 
         # 2. Gorilla appears from the right of the screen
         elif current_story_event == 3:
-            # fill the screen with BeCode color
-            game_window.screen.fill(becode_color)
-            gorilla.move()
-            game_window.screen.blit(
-                gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
-            gorilla.sounds.play()
+            play_story_event(current_story_event, level, "gorilla_image")
 
         # 3. Gorilla speaks
         elif current_story_event in [4, 5, 6, 7]:
-            # fill the screen with BeCode color
-            game_window.screen.fill(becode_color)
-            draw_text(gorilla.dialogues[current_story_event], slide_font_color, (
-                game_window.width_px/2, game_window.height_px/2))
-            game_window.screen.blit(
-                gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
-            gorilla.sounds.play()
+            play_story_event(current_story_event, level, "gorilla_image")
 
         # 4. Gorilla turns its back and speaks
         elif current_story_event in [8, 9]:
-            # fill the screen with BeCode color
-            game_window.screen.fill(becode_color)
-            draw_text(gorilla.dialogues[current_story_event], slide_font_color, (
-                game_window.width_px/2, game_window.height_px/2))
-            game_window.screen.blit(gorilla.image_flip, (
-                gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
-            gorilla.sounds.play()
+            play_story_event(current_story_event, level, "gorilla_image_flip")
 
         # 5. Gorilla faces towards left again and speaks
         elif current_story_event in [10, 11, 12, 13]:
-            # fill the screen with BeCode color
-            game_window.screen.fill(becode_color)
-            draw_text(gorilla.dialogues[current_story_event], slide_font_color, (
-                game_window.width_px/2, game_window.height_px/2))
-            game_window.screen.blit(
-                gorilla.image, (gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
-            gorilla.sounds.play()
+            play_story_event(current_story_event, level, "gorilla_image")
 
         # 6. Gorilla turn its back and leaves the screen from the right
-        elif current_story_event == 13:
-            game_window.screen.fill(becode_color)
-            gorilla.move()
-            game_window.screen.blit(gorilla.image_flip, (
-                gorilla.x - gorilla.image.get_width(), gorilla.y - gorilla.image.get_height() - 100))
-            gorilla.sounds.play()
+        elif current_story_event == 14:
+            play_story_event(current_story_event, level, "gorilla_image_flip")
 
         # Transition before quitting the start screen loop
-        elif current_story_event == 14:
+        elif current_story_event == 15:
             
             # Turn the screen whiter every second
             if time_s > 0.001:
                 for i, color in enumerate(transition_color):
-                    if transition_color[i] < 255:
+                    if color < 255:
                         transition_color[i] += 1
+                        print(color)
                 time_s = 0.0 # reset timer
             game_window.screen.fill(transition_color)
         
         # Quit the start screen loop
-        elif current_story_event == 15:
+        elif current_story_event == 16:
             # stop gorilla sounds
             gorilla.sounds.stop()
             start_screen = False
@@ -318,8 +296,9 @@ def start_screen() -> None:
         pygame.display.update()
 
         # Time
-        time_s += dt_s  # Measure time spent
-        # Limit the frame rate to max the framerate_limit
+        ## Measure time spent at each iteration
+        time_s += dt_s
+        ## Limit the frame rate to max the framerate_limit
         main_clock.tick(framerate_limit)
 
 
@@ -1018,31 +997,27 @@ def run(config_file, game):
 if __name__ == '__main__':
 
     # Globals
-    # global game_window, game_font, player_1, world
-    # global generation
 
     # CONSTANTS
-    WINDOW_WIDTH_PX = 1440
-    WINDOW_HEIGHT_PX = 900
-    CAPTION = "Enter the Pygame"
-    PLAYER_SIZE = 50
-    AIBOT_SIZE = 50
-    GORILLA_SIZE = 50
-    OBSTACLE_MIN_SIZE = 20
-    OBSTACLE_MAX_SIZE = 50
+    WINDOW_WIDTH_PX: int = 1440
+    WINDOW_HEIGHT_PX: int = 900
+    CAPTION: str = "Enter the Pygame"
+    PLAYER_SIZE: int = 50
+    AIBOT_SIZE: int = 50
+    GORILLA_SIZE: int = 50
+    OBSTACLE_MIN_SIZE: int = 20
+    OBSTACLE_MAX_SIZE: int = 50
 
     # Variables
-    framerate_limit = 120
-    generation = 0
-    slide_font_color = (255, 255, 255)
-    becode_color = (22, 35, 46)
+    framerate_limit: int = 120
+    generation: int = 0
+    slide_font_color: Tuple[int] = (255, 255, 255)
+    becode_color: Tuple[int] = (22, 35, 46)
 
     # Setup
     pygame.init()  # initiate pygame
     pygame.font.init()  # initiate font
-    game_font = pygame.font.SysFont("comicsans", 50)
-    # end_font = pygame.font.SysFont("comicsans", 70)
-    # game_font = pygame.font.Font('04B_19.ttf',40) # create a font (style, size)
+    game_font = pygame.font.SysFont("comicsans", 50) # setting font and size
 
     # Display
     game_window = GameWindow((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX), CAPTION)
@@ -1053,65 +1028,57 @@ if __name__ == '__main__':
 
     # Instantiate environment
     world = Environment((WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX),
-                        color=(255, 255, 255))
+                        color=slide_font_color)
+    
+
     # Instantiate player
-    # player_1 = Player(20, (1,1),'Yoyo', (255,0,0))
-    player_1 = Player((100, world.height/2), size=100, mass=100,
-                      name="John Titor", color=becode_color)
+    player_1 = Player(
+        "John Titor",
+        (100, world.height_px/2),
+        size_px=PLAYER_SIZE,
+        mass=100,
+        color=becode_color
+    )
 
     # Instantiate local client who will control player_1
     client_1 = Client(player_1)
 
     # Instantiate obstacles
-    obstacles_list: List[Obstacle] = []
-    min_size: int = 30
-    max_size: int = 30
-    for _ in range(3):
-        obstacle = Obstacle((random.uniform(0, world.width), random.uniform(
-            0, world.height)), size=random.uniform(min_size, max_size), mass=50)
-        # Assign rectangle: pygame.Rect(left, top, width, height)
-        # obstacle.rect = pygame.Rect(obstacle.x, obstacle.y, random.uniform(obstacle_min_size, world.width/10), random.uniform(obstacle_min_size, world.width/10))
-        obstacles_list.append(obstacle)
+    # obstacles_list: List[Obstacle] = []
+    # min_size: int = 30
+    # max_size: int = 30
+    # for _ in range(3):
+    #     obstacle = Obstacle((random.uniform(0, world.width), random.uniform(
+    #         0, world.height)), size=random.uniform(min_size, max_size), mass=50)
+    #     obstacles_list.append(obstacle)
 
-    # Instantiate gorillas
-    gorilla = Gorilla("gamecore/assets/images/gorilla.png",
-                      (game_window.width_px, game_window.height_px))
-    # gorilla_left = Gorilla("gamecore/assets/images/gorilla.png",
-    #                   (0, game_window.height_px/2))
-    # gorilla_right = Gorilla("gamecore/assets/images/gorilla.png",
-    #                   (0, game_window.height_px/2))
-    # # convert() converts the image into a format easier for pygame => faster
-    # # alpha() otherwise pygame paints black where the image is empty/transparent
-    # gorilla.image = pygame.image.load(gorilla.image_path).convert_alpha()
-    # gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False)  # flip the gorilla horizontally
-    # gorilla_right.image = gorilla.image
-    # gorilla_left.image = pygame.transform.flip(gorilla.image, True, False)  # flip the gorilla horizontally
-    # gorilla_right.image = pygame.transform.scale(gorilla_right.image, (200,200))
-    # gorilla_left.image = pygame.transform.scale(gorilla_left.image, (200,200))
-    # gorilla_right.height = gorilla_right.image.get_height()
-    # gorilla_left.height = gorilla_left.image.get_height()
-    # gorilla_right.width = gorilla_right.image.get_width()
-    # gorilla_left.width = gorilla_left.image.get_width()
-    
-    # Get the mask of gorilla images
-    # gorilla_right.image_mask = pygame.mask.from_surface(gorilla_right.image)
-    # gorilla_left.image_mask = pygame.mask.from_surface(gorilla_left.image)
+    # Instantiate gorilla
+    gorilla = Gorilla((game_window.width_px, game_window.height_px))
+    gorilla.image = pygame.image.load("gamecore/assets/images/gorilla.png").convert_alpha()
+    gorilla.image_flip = pygame.transform.flip(gorilla.image, True, False)
     
     # import gorilla sounds
     gorilla.sounds = pygame.mixer.Sound(
         "gamecore/assets/sounds/gorilla_sounds.mp3")
 
-    # Create levels
-    levels_list = create_levels()
+    # Start screen: Title slide and dialogue with gorilla
+    level_0 = create_level("Title", "slide", "gamecore/assets/images/title_slide.png", bg_color=becode_color, font_color= (255,255,255), resize=True)
+    start_screen(level_0)
 
-    # Start screen
-    # start_screen()
-
-    # Start game
+    # # Start game_1
+    # level_1 = create_level("Level 1", "game_level", bg_color=(255,255,255))
     # config_path = "gamecore/config-feedforward.txt"
     # run(config_path, game_1)
+
+    # # Start game_2
+    # level_2 = create_level("Level 1", "game_level", bg_color=(255,255,255))
     # config_path = "gamecore/config-feedforward-2.txt"
     # run(config_path, game_2)
-    config_path = "gamecore/config-feedforward-3.txt"
-    run(config_path, game_3)
+
+    # # Start game_3
+    # level_3 = create_level("Level 1", "game_level", bg_color=(120,184,51))
+    # config_path = "gamecore/config-feedforward-3.txt"
+    # run(config_path, game_3)
+
+    # Quit the program
     terminate()

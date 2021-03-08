@@ -1,3 +1,7 @@
+"""
+Local modules that defines the player and non-player characters.
+"""
+
 # =====================================================================
 # Import
 # =====================================================================
@@ -6,216 +10,134 @@
 import math
 from typing import List, Set, Dict, TypedDict, Tuple, Optional
 
-# Import 3rd party modules
-
-
-# Import local modules
-
 
 # =====================================================================
 # Classes
 # =====================================================================
 
-# from pygame import math
-import math
-
-
 class Player:
     """
-    Player is a circle.
-    Has velocity, size and mass
-    It has 2 attributes: name, xxx
-    * name: xxx
-    * xxx: xxx
+    Player is represented by a circle object.
+    At the initialization, it has 9 attributes:
+    * name: player's name
+    * x_px: player's pixel position in the x direction (at the circle center)
+    * y_px: player's pixel position in the y direction (at the circle center)
+    * size_px: player's circle radius in pixel
+    * mass: player's mass
+    * color: player's circle color
+    * speed: player's speed
+    * angle: player's direction
+    * elasticity: player's elasticity.
 
-    And Player class has 2 class attributes: count_created_players, players_list
-    * count_created_players: int starting at 0, to count the number of players created
-    * players_list: empty list to store the players
     """
-
-    # class attributes
-    count_created_players: int = 0
-    players_list: list = []
 
     def __init__(
         self,
-        xy_position: tuple,
-        size=50,
+        name: str,
+        xy_position_px: Tuple[float],
+        size_px: int = 50,
         mass: int = 1,
-        name: str = None,
-        color: tuple = (0, 0, 255),  # RGB color code for blue
+        color: Tuple[int] = (0, 0, 255)  # RGB color code for blue
     ) -> None:
         """
-        Function to create an instance of Player class
-        By default:
-        * name is "player_1", then "player_2" if no name is provided
-        * boost is 5.0 
-          (when player uses boost: boost is set to 0 and has to wait 5.0 seconds to use it again)
+        Function to create an instance of Player class.
+        Player instance is created with no velocity (speed and angle);
+        and an elasticity to determine the level of elastic collision 
+        between him and another object. 
         """
-        Player.count_created_players += 1
-        self.x: int
-        self.y: int
-        self.x, self.y = xy_position
-        self.size = size
-        self.thickness = 0
-        self.speed = 0  # player starts with no speed
-        self.angle = 0
-        self.mass = mass
-        self.elasticity = 0.9
+        self.name: str = name
+        self.x_px: float
+        self.y_px: float
+        self.x_px, self.y_px = xy_position_px
+        self.size_px: int = size_px
+        self.mass: int = mass
+        self.color: Tuple[int] = color
 
-        if name is None:
-            self.name = f"player_{Player.count_created_players}"
-        else:
-            self.name = name
+        self.speed: float = 0.0  # player starts with no speed
+        self.angle: float = 0.0  # player has no direction yet
+        self.elasticity: float = 0.9
 
-        self.color: Tuple[int, int, int] = color
-        self.boost: float = 5.0
-
-        Player.players_list.append(self)
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
-        In order to print the Player instance in the specified format
+        Function to print the Player instance in the specified format.
         """
         return f"{self.name}"
 
-    def move(self):
+    def move(self) -> None:
         """
-        Function to move the player according to its speed and angle
+        Function to update the player's position due to its speed and angle.
         """
-        self.x += math.sin(self.angle) * self.speed
-        self.y -= math.cos(self.angle) * self.speed
+        self.x_px += math.sin(self.angle) * self.speed
+        self.y_px -= math.cos(self.angle) * self.speed
 
 
 class AIBots(Player):
     """
     AIBots is a child class of Player class. 
-    It has 2 attributes: name, xxx
-    * name: xxx
-    * xxx: xxx
-
-    And AIBots class has 2 class attributes: count_created_aibots, aibots_list
-    * count_created_aibots: int starting at 0, to count the number of aibots created
-    * aibots_list: empty list to store the aibots
+    At the initialization, it inherites the 9 attributes from Player.
     """
-
-    # class attributes
-    count_created_aibots: int = 0
-    aibots_list: list = []
 
     def __init__(
         self,
-        xy_position: tuple,
-        size=50,
+        name: str,
+        xy_position_px: Tuple[float],
+        size_px: int = 50,
         mass: int = 1,
-        name: str = None,
-        color: tuple = (255, 0, 0),  # RGB color code for red
-        boost: float = 5.0
+        color: Tuple[int] = (255, 0, 0)  # RGB color code for red
     ) -> None:
         """
-        Function to create an instance of AIBots class
-        By default:
-        * name is "aibots_1", then "aibots_2" if no name is provided
-        * boost is 5.0 
-          (when player uses boost: boost is set to 0 and has to wait 5.0 seconds to use it again)
+        Function to create an instance of AIBots class.
         """
-        AIBots.count_created_aibots += 1
-        self.x: int
-        self.y: int
-        self.x, self.y = xy_position
-        self.size = size
-        self.thickness = 0
-        self.speed = 0  # aibot starts with no speed
-        self.angle = 0
-        self.mass = mass
-        self.elasticity = 0.9
 
-        if name is None:
-            self.name = f"aibots_{AIBots.count_created_aibots}"
-        else:
-            self.name = name
-        # super().__init__(radius, xy_pos, self.name, color, boost)
-
-        self.color = color
-        self.boost = boost
-
-        AIBots.aibots_list.append(self)
+        super().__init__(name, xy_position_px, size_px, mass, color)
 
 
-class Obstacle (Player):
+class Obstacle(Player):
     """
-    Obstacle is a rectangle.
+    Obstacle is a child class of Player class. 
+    At the initialization, it inherites the 9 attributes from Player.
     """
-
-    # class attributes
-    count_created_obstacles: int = 0
-    players_list: list = []
 
     def __init__(
         self,
-        xy_position: tuple,
-        size=50,
+        name: str,
+        xy_position_px: Tuple[float],
+        size_px: int = 50,
         mass: int = 1,
-        name: str = None,
-        color: tuple = (128, 128, 128),  # RGB color code for grey
+        color: Tuple[int] = (128, 128, 128)  # RGB color code for grey
     ) -> None:
         """
-        Function to create an instance of Obstacle class
+        Function to create an instance of Obstacle class.
         """
-        Obstacle.count_created_obstacles += 1
-        self.x: int
-        self.y: int
-        self.x, self.y = xy_position
-        self.size = size
-        self.thickness = 0
-        self.speed = 0  # player starts with no speed
-        self.angle = 0
-        self.mass = mass
-        self.elasticity = 2
 
-        if name is None:
-            self.name = f"obstacle_{Obstacle.count_created_obstacles}"
-        else:
-            self.name = name
-
-        self.color: Tuple[int, int, int] = color
-
-        Obstacle.players_list.append(self)
+        super().__init__(name, xy_position_px, size_px, mass, color)
 
 
 class Gorilla:
     """
-    Gorilla class
+    Gorilla is a non-player character.
+    It is represented by an image surface.
+    At the initialization, it has 5 attributes:
+    * image: gorilla image
+    * image_flip: gorilla image flipped horizontally, by default: None
+    * x_px: gorilla's pixel position in the x direction (at the left of the image surface)
+    * y_px: gorilla's pixel position in the y direction (at the top of the image surface)
+    * dialogues: gorilla lines of dialogue in the story script.
     """
 
     def __init__(
         self,
-        image_path: str,
-        xy_pos: tuple
+        xy_position_px: Tuple[float]
     ) -> None:
         """
-        Function to create an instance of Gorilla class
+        Function to create an instance of Gorilla class.
         """
-        self.image_path = image_path
+        self.x_px: float
+        self.y_px: float
+        self.x_px, self.y_px = xy_position_px
         self.image = None
         self.image_flip = None  # will contain the horizontally flipped image of the gorilla
-        self.x: int
-        self.y: int
-        self.x, self.y = xy_pos
 
-        """
-        My lines:
-        0. "Let's dive into the game!"
-        3. "Whaat? Who's there?"
-        6. "Another dimension? You created your designer?"
-           "You waited for 29 years that he draws you like this ?!
-           "Sorry to say but you're not exactly a picasso!"
-           "Wait, that's not what is important. Why are you here?"
-        7. "A convergence?"
-        11. "Waiiitt come back!"
-            " What does that mean? Train myself? In what? And for what?"
-            "What a very strange gorilla... Well, let's play, maybe I'll find more information.
-        """
         self.dialogues = [
             # "Let's dive into the game!"
             "You're wrong.",  # 0
@@ -240,35 +162,10 @@ class Gorilla:
             "Something that must never happen!",  # 10
             "However, I can't tell you more than that.",  # 11
             "You're not ready... yet.",  # 12
-            "What I can tell you is to train yourself!"  # 13
+            "What I can tell you is to train yourself!",  # 13
+            "..." # 14
 
             # "Waiiitt come back!"
             # " What does that mean? Train myself? In what? And for what?"
             # "What a very strange gorilla... Well, let's play, maybe I'll find more information.
         ]
-
-    def move(self):
-        pass
-# ============================================================
-# Main functions
-# ============================================================
-
-
-def main():
-    player_1 = Player(20, (1, 1), 'Yoyo', (255, 0, 0))
-    player_2 = Player(20, (2, 2))
-    aibots_1 = AIBots(20, (3, 3), "I-Bot")
-    aibots_2 = AIBots(20, (4, 4))
-    player_3 = Player(20, (5, 5))
-    print(f"{player_1} vs {aibots_1}")
-    print(f"{player_2} vs {aibots_2}")
-    print(player_3)
-
-# ============================================================
-# Run
-# ============================================================
-
-
-# if you directly run this program, main() fct will create 2 player instances and print them
-if __name__ == '__main__':
-    main()

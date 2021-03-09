@@ -223,7 +223,7 @@ def start_screen(level: Level) -> None:
     # Variables
     start_screen = True
     time_s: float = 0.0
-    current_story_event = -1  # title slide just before gorilla speaks
+    current_story_event = -2  # title slide, then table of contents, just before gorilla speaks
     transition_color = list(level.bg_color) # convert rgb tuple into a list to turn the screen whiter every second
 
     # Enter game loop
@@ -242,6 +242,10 @@ def start_screen(level: Level) -> None:
         # If user_input is True, the user pressed a key to go forward in the story
         if user_input == True:
             current_story_event += 1
+
+        # 0. Table of contents
+        if current_story_event == -1:
+            level.bg_surface = pygame.image.load("gamecore/assets/images/table_of_contents_slide.png").convert()
 
         # 1. Big text appears
         if current_story_event in [0, 1, 2]:

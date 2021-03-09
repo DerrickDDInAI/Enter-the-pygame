@@ -65,7 +65,7 @@ class Environment:
         This air resistance slows its speed.
         """
         player.speed *= (player.mass/(player.mass +
-                                      self.air_mass)) ** player.size
+                                      self.air_mass)) ** player.size_px
 
     def accelerate(self, player, vector: Tuple[float]) -> None:
         """
@@ -93,7 +93,7 @@ class Environment:
 
         # If distance < sum of players' radius, it means collision;
         # No attraction effect anymore
-        if distance < player_1.size + player_2.size:
+        if distance < player_1.size_px + player_2.size_px:
             return True
 
         # Use Newton's law of universal gravitation
@@ -117,7 +117,7 @@ class Environment:
         distance: float = math.hypot(distance_x, distance_y)
 
         # If distance < sum of players' radius, it means collision
-        if distance < player_1.size + player_2.size:
+        if distance < player_1.size_px + player_2.size_px:
             if apply:
                 angle: float = math.atan2(
                     distance_y, distance_x) + 0.5 * math.pi
@@ -144,11 +144,11 @@ class Environment:
                 # At the time, we detect the collision, the players' circles could possibly have overlapped
                 # We correct their positions to remove this overlap
                 overlap: float = 0.5 * \
-                    (player_1.size + player_2.size - distance + 1)
-                player_1.x += math.sin(angle) * overlap
-                player_1.y -= math.cos(angle) * overlap
-                player_2.x -= math.sin(angle) * overlap
-                player_2.y += math.cos(angle) * overlap
+                    (player_1.size_px + player_2.size_px - distance + 1)
+                player_1.x_px += math.sin(angle) * overlap
+                player_1.y_px -= math.cos(angle) * overlap
+                player_2.x_px -= math.sin(angle) * overlap
+                player_2.y_px += math.cos(angle) * overlap
 
             return True
 
@@ -161,29 +161,29 @@ class Environment:
         """
         hit: bool = False
         # If player crosses left border:
-        if player.x < player.size:
-            player.x = 2 * player.size - player.x
+        if player.x_px < player.size_px:
+            player.x_px = 2 * player.size_px - player.x_px
             player.angle = - player.angle
             player.speed *= self.elasticity
             hit = True
 
         # if player crosses right border:
-        elif player.x > self.width - player.size:
-            player.x = 2 * (self.width - player.size) - player.x
+        elif player.x_px > self.width_px - player.size_px:
+            player.x_px = 2 * (self.width_px - player.size_px) - player.x_px
             player.angle = - player.angle
             player.speed *= self.elasticity
             hit = True
 
         # if player crosses top border:
-        if player.y < player.size:
-            player.y = 2 * player.size - player.y
+        if player.y_px < player.size_px:
+            player.y_px = 2 * player.size_px - player.y_px
             player.angle = math.pi - player.angle
             player.speed *= self.elasticity
             hit = True
 
         # if player crosses bottom border:
-        elif player.y > self.height - player.size:
-            player.y = 2 * (self.height - player.size) - player.y
+        elif player.y_px > self.height_px - player.size_px:
+            player.y_px = 2 * (self.height_px - player.size_px) - player.y_px
             player.angle = math.pi - player.angle
             player.speed *= self.elasticity
             hit = True

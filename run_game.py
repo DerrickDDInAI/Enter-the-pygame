@@ -482,6 +482,191 @@ def game_1(genomes, config) -> None:
 
 def game_2(genomes, config) -> None:
     """
+    Function to play game 3 for current genome of AIBots.
+    Game 3 objective: AIBots must touch the player and avoid obstacles.
+    1. Create population of AIBots. Each AIBots has its own neural network.
+    2. Run the game for that population and set their respective fitness scores based on how long they survive.
+    """
+    # Global
+    global generation
+    generation += 1  # Increment by 1 at every game session
+
+    # Variables
+    game_running: bool = True  # Game loop
+    time_s: float = 0.0
+    player_1.x_px, player_1.y_px = (100, world.height_px/2)  # Restart player position at every game session
+
+    # Instantiate obstacles
+    obstacles_list: List[Obstacle] = []
+    for obs_nb in range(15):
+        obstacle = Obstacle(str(obs_nb), (random.uniform(0, world.width_px), random.uniform(
+            0, world.height_px)), size_px=random.uniform(OBSTACLE_MIN_SIZE, OBSTACLE_MAX_SIZE), mass=50)
+        obstacles_list.append(obstacle)
+
+    # Create empty lists
+    genomes_list: list = []
+    aibots_list: List[AIBots] = []
+    neural_nets_list: list = []
+
+    # Create a population of AIBots and assign them a neural network
+    for genome_id, genome in genomes:
+        genome.fitness = 0  # AIBot starts the game with fitness score at 0
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+        neural_nets_list.append(net)
+        # Create an aibot
+        aibot_y_px = world.height_px/2
+        aibots_list.append(
+            AIBots(str(genome_id), (world.width_px - 100, aibot_y_px), size_px=AIBOT_SIZE, mass=50))
+        genomes_list.append(genome)
+
+    # Enter game loop; game continues until there is no more AIBots
+    while game_running and len(aibots_list):
+
+        # Get the delta t for one frame (this changes depending on system load).
+        dt_s = float(main_clock.tick(framerate_limit) * 1e-3)
+
+        # Get user input
+        user_input = client_1.get_user_input()
+
+        # Go to next generation if player press return button
+        if isinstance(user_input, str):
+            break
+
+        # Display background
+        ## Display level 1 background surface
+        ## blit() to display a surface on another surface: here to display level surface on screen
+        ## (0,0): the position of the top left of bg_surface
+        
+        ## If user_input is a tuple, it means the user changed the screen size
+        if isinstance(user_input, tuple):
+            game_window.width_px, game_window.height_px = user_input
+            world.width_px, world.height_px = user_input  # update the environment as well
+        game_window.screen.fill(level_2.bg_color)  # fill the screen with level color
+
+        # Reward each AIBot a fitness of 0.1 for each frame it stays alive
+        for i, aibot in enumerate(aibots_list):
+            genomes_list[i].fitness += 0.1
+
+        # Give inputs => neural network will output a list of values
+        # From which it can determine in which direction to move
+        # Use a tanh activation function to have the output results between -1 and 1
+
+            # As input: AIBot's location and its distance compared to player and obstacles
+            distances_to_obstacles = []
+            for obstacle in obstacles_list:
+                distances_to_obstacles.extend([abs(aibot.x_px - obstacle.x_px), abs(aibot.y_px - obstacle.y_px)])
+            
+            input_list: list = [aibot.x_px,
+                aibot.y_px,
+                abs(aibot.x_px - client_1.player.x_px),
+                abs(aibot.y_px - client_1.player.y_px)
+                ]
+            input_list.extend(distances_to_obstacles)
+
+            # Activate AIBots's neural network to compute its output (= decision)
+            output: list = neural_nets_list[i].activate(input_list)
+
+            # Move AIBot
+            ## If 1st output > 50%: go left
+            if output[0] > 0.5:
+                aibot.angle, aibot.speed = world.add_vectors(
+                    (aibot.angle, aibot.speed), (- 1 * math.pi/2, 2))
+            
+            ## If 2nd output > 50%: go right
+            if output[1] > 0.5:
+                aibot.angle, aibot.speed = world.add_vectors(
+                    (aibot.angle, aibot.speed), (math.pi/2, 2))
+
+            ## If 3rd output > 50%: go up
+            if output[2] > 0.5:
+                aibot.angle, aibot.speed = world.add_vectors(
+                    (aibot.angle, aibot.speed), (0, 2))
+            
+            ## If 4th output > 50%: go down
+            if output[3] > 0.5:
+                aibot.angle, aibot.speed = world.add_vectors(
+                    (aibot.angle, aibot.speed), (math.pi, 2))
+
+            aibot.move()
+            world.add_air_resistance(aibot)
+            world.attraction(player_1, aibot)
+            world.bounce(aibot)
+
+            collide_player: bool = world.collide(player_1, aibot, True) # True to apply collision effect
+            if collide_player:
+                genomes_list[aibots_list.index(aibot)].fitness += 5
+            for obstacle in obstacles_list:
+                collide_obstacle_aibot: bool = world.collide(obstacle, aibot, False)
+                # If collision, punish the aibot and remove it
+                if collide_obstacle_aibot:
+                    genomes_list[aibots_list.index(aibot)].fitness -= 5
+                    neural_nets_list.pop(aibots_list.index(aibot))
+                    genomes_list.pop(aibots_list.index(aibot))
+                    aibots_list.pop(aibots_list.index(aibot))
+                    break
+
+            ## Limits aibot's speed
+            if aibot.speed > 20:
+                aibot.speed = 20
+
+        # Move player
+        player_1.move()
+        world.add_air_resistance(player_1)
+        world.bounce(player_1)
+
+        # Move obstacles
+        for obstacle in obstacles_list:
+            obstacle.move()
+            world.add_air_resistance(obstacle)
+            world.collide(obstacle, player_1, True)
+            world.bounce(obstacle)
+
+            # Limits obstacle's speed
+            if obstacle.speed > 20:
+                obstacle.speed = 20
+
+        # Draw
+        ## Draw AIBots
+        for aibot in aibots_list:
+            pygame.draw.circle(game_window.screen, aibot.color,
+                               (aibot.x_px, aibot.y_px), aibot.size_px)
+            
+        ## Draw Obstacles
+        for obstacle in obstacles_list:
+            pygame.draw.circle(game_window.screen, obstacle.color,
+                               (obstacle.x_px, obstacle.y_px), obstacle.size_px)
+
+        ## Draw Players
+        pygame.draw.circle(game_window.screen, player_1.color,
+                           (player_1.x_px, player_1.y_px), player_1.size_px)
+
+        ## Draw text: level name
+        draw_text(f"{level_2.name}", becode_color,
+                  (200, 50))
+
+        ## Draw text: Time
+        draw_text(f"Time: {int(time_s)}", becode_color,
+                  (game_window.width_px - 100, 50))
+
+        ## Draw text: current generation
+        draw_text(f"Generation: {generation}",
+                  becode_color, (game_window.width_px/2, 50))
+
+        ## Draw text: Number of AIBots alive
+        draw_text(f"Alive: {len(aibots_list)}",
+                  becode_color, (game_window.width_px/2, 100))
+
+        # Update the screen with the drawings
+        pygame.display.update()
+
+        # Time
+        time_s += dt_s  # Measure time spent
+        # Limit the frame rate to max the framerate_limit
+        main_clock.tick(framerate_limit)
+
+
+def game_3(genomes, config) -> None:
+    """
     Function to play game 2 for current genome of AIBots.
     Game 2 objective: AIBots must score goals by putting obstacle into the goal
     1. Create population of AIBots. Each AIBots has its own neural network.
@@ -557,7 +742,7 @@ def game_2(genomes, config) -> None:
         if isinstance(user_input, tuple):
             game_window.width_px, game_window.height_px = user_input
             world.width_px, world.height_px = user_input  # update the environment as well
-        game_window.screen.fill(level_2.bg_color)  # fill the screen with level color
+        game_window.screen.fill(level_3.bg_color)  # fill the screen with level color
         
         for i, aibot in enumerate(aibots_list):
 
@@ -706,7 +891,7 @@ def game_2(genomes, config) -> None:
                                (obstacle.x_px, obstacle.y_px), obstacle.size_px)
 
         ## Draw text: level name
-        draw_text(f"{level_2.name}", becode_color,
+        draw_text(f"{level_3.name}", becode_color,
                   (100, 50))
 
         ## Draw text: Time
@@ -730,190 +915,6 @@ def game_2(genomes, config) -> None:
         if time_s > 1.0:
             timer -= 1.0
             time_s = 0.0
-        # Limit the frame rate to max the framerate_limit
-        main_clock.tick(framerate_limit)
-
-def game_3(genomes, config) -> None:
-    """
-    Function to play game 3 for current genome of AIBots.
-    Game 3 objective: AIBots must touch the player and avoid obstacles.
-    1. Create population of AIBots. Each AIBots has its own neural network.
-    2. Run the game for that population and set their respective fitness scores based on how long they survive.
-    """
-    # Global
-    global generation
-    generation += 1  # Increment by 1 at every game session
-
-    # Variables
-    game_running: bool = True  # Game loop
-    time_s: float = 0.0
-    player_1.x_px, player_1.y_px = (100, world.height_px/2)  # Restart player position at every game session
-
-    # Instantiate obstacles
-    obstacles_list: List[Obstacle] = []
-    for obs_nb in range(15):
-        obstacle = Obstacle(str(obs_nb), (random.uniform(0, world.width_px), random.uniform(
-            0, world.height_px)), size_px=random.uniform(OBSTACLE_MIN_SIZE, OBSTACLE_MAX_SIZE), mass=50)
-        obstacles_list.append(obstacle)
-
-    # Create empty lists
-    genomes_list: list = []
-    aibots_list: List[AIBots] = []
-    neural_nets_list: list = []
-
-    # Create a population of AIBots and assign them a neural network
-    for genome_id, genome in genomes:
-        genome.fitness = 0  # AIBot starts the game with fitness score at 0
-        net = neat.nn.FeedForwardNetwork.create(genome, config)
-        neural_nets_list.append(net)
-        # Create an aibot
-        aibot_y_px = world.height_px/2
-        aibots_list.append(
-            AIBots(str(genome_id), (world.width_px - 100, aibot_y_px), size_px=AIBOT_SIZE, mass=50))
-        genomes_list.append(genome)
-
-    # Enter game loop; game continues until there is no more AIBots
-    while game_running and len(aibots_list):
-
-        # Get the delta t for one frame (this changes depending on system load).
-        dt_s = float(main_clock.tick(framerate_limit) * 1e-3)
-
-        # Get user input
-        user_input = client_1.get_user_input()
-
-        # Go to next generation if player press return button
-        if isinstance(user_input, str):
-            break
-
-        # Display background
-        ## Display level 1 background surface
-        ## blit() to display a surface on another surface: here to display level surface on screen
-        ## (0,0): the position of the top left of bg_surface
-        
-        ## If user_input is a tuple, it means the user changed the screen size
-        if isinstance(user_input, tuple):
-            game_window.width_px, game_window.height_px = user_input
-            world.width_px, world.height_px = user_input  # update the environment as well
-        game_window.screen.fill(level_3.bg_color)  # fill the screen with level color
-
-        # Reward each AIBot a fitness of 0.1 for each frame it stays alive
-        for i, aibot in enumerate(aibots_list):
-            genomes_list[i].fitness += 0.1
-
-        # Give inputs => neural network will output a list of values
-        # From which it can determine in which direction to move
-        # Use a tanh activation function to have the output results between -1 and 1
-
-            # As input: AIBot's location and its distance compared to player and obstacles
-            distances_to_obstacles = []
-            for obstacle in obstacles_list:
-                distances_to_obstacles.extend([abs(aibot.x_px - obstacle.x_px), abs(aibot.y_px - obstacle.y_px)])
-            
-            input_list: list = [aibot.x_px,
-                aibot.y_px,
-                abs(aibot.x_px - client_1.player.x_px),
-                abs(aibot.y_px - client_1.player.y_px)
-                ]
-            input_list.extend(distances_to_obstacles)
-
-            # Activate AIBots's neural network to compute its output (= decision)
-            output: list = neural_nets_list[i].activate(input_list)
-
-            # Move AIBot
-            ## If 1st output > 50%: go left
-            if output[0] > 0.5:
-                aibot.angle, aibot.speed = world.add_vectors(
-                    (aibot.angle, aibot.speed), (- 1 * math.pi/2, 2))
-            
-            ## If 2nd output > 50%: go right
-            if output[1] > 0.5:
-                aibot.angle, aibot.speed = world.add_vectors(
-                    (aibot.angle, aibot.speed), (math.pi/2, 2))
-
-            ## If 3rd output > 50%: go up
-            if output[2] > 0.5:
-                aibot.angle, aibot.speed = world.add_vectors(
-                    (aibot.angle, aibot.speed), (0, 2))
-            
-            ## If 4th output > 50%: go down
-            if output[3] > 0.5:
-                aibot.angle, aibot.speed = world.add_vectors(
-                    (aibot.angle, aibot.speed), (math.pi, 2))
-
-            aibot.move()
-            world.add_air_resistance(aibot)
-            world.attraction(player_1, aibot)
-            world.bounce(aibot)
-
-            collide_player: bool = world.collide(player_1, aibot, True) # True to apply collision effect
-            if collide_player:
-                genomes_list[aibots_list.index(aibot)].fitness += 5
-            for obstacle in obstacles_list:
-                collide_obstacle_aibot: bool = world.collide(obstacle, aibot, False)
-                # If collision, punish the aibot and remove it
-                if collide_obstacle_aibot:
-                    genomes_list[aibots_list.index(aibot)].fitness -= 5
-                    neural_nets_list.pop(aibots_list.index(aibot))
-                    genomes_list.pop(aibots_list.index(aibot))
-                    aibots_list.pop(aibots_list.index(aibot))
-                    break
-
-            ## Limits aibot's speed
-            if aibot.speed > 20:
-                aibot.speed = 20
-
-        # Move player
-        player_1.move()
-        world.add_air_resistance(player_1)
-        world.bounce(player_1)
-
-        # Move obstacles
-        for obstacle in obstacles_list:
-            obstacle.move()
-            world.add_air_resistance(obstacle)
-            world.collide(obstacle, player_1, True)
-            world.bounce(obstacle)
-
-            # Limits obstacle's speed
-            if obstacle.speed > 20:
-                obstacle.speed = 20
-
-        # Draw
-        ## Draw AIBots
-        for aibot in aibots_list:
-            pygame.draw.circle(game_window.screen, aibot.color,
-                               (aibot.x_px, aibot.y_px), aibot.size_px)
-            
-        ## Draw Obstacles
-        for obstacle in obstacles_list:
-            pygame.draw.circle(game_window.screen, obstacle.color,
-                               (obstacle.x_px, obstacle.y_px), obstacle.size_px)
-
-        ## Draw Players
-        pygame.draw.circle(game_window.screen, player_1.color,
-                           (player_1.x_px, player_1.y_px), player_1.size_px)
-
-        ## Draw text: level name
-        draw_text(f"{level_3.name}", becode_color,
-                  (200, 50))
-
-        ## Draw text: Time
-        draw_text(f"Time: {int(time_s)}", becode_color,
-                  (game_window.width_px - 100, 50))
-
-        ## Draw text: current generation
-        draw_text(f"Generation: {generation}",
-                  becode_color, (game_window.width_px/2, 50))
-
-        ## Draw text: Number of AIBots alive
-        draw_text(f"Alive: {len(aibots_list)}",
-                  becode_color, (game_window.width_px/2, 100))
-
-        # Update the screen with the drawings
-        pygame.display.update()
-
-        # Time
-        time_s += dt_s  # Measure time spent
         # Limit the frame rate to max the framerate_limit
         main_clock.tick(framerate_limit)
 
@@ -1009,25 +1010,25 @@ if __name__ == '__main__':
         "gamecore/assets/sounds/whistle_sound.mp3")
 
     # Start screen: Title slide and dialogue with gorilla
-    level_0 = create_level("Title", "slide", "gamecore/assets/images/title_slide.png", bg_color=becode_color, font_color= (255,255,255), resize=True)
-    start_screen(level_0)
+    # level_0 = create_level("Title", "slide", "gamecore/assets/images/title_slide.png", bg_color=becode_color, font_color= (255,255,255), resize=True)
+    # start_screen(level_0)
 
     # Start game_1
     level_1 = create_level("Don't touch a player!", "game_level", bg_color=(255,255,255))
     config_path = "gamecore/config-feedforward.txt"
     run(config_path, game_1)
 
-    # Start game_3
-    generation = 0 # reset generation counter
-    level_3 = create_level("Touch a player!", "game_level", bg_color=(255,255,255))
-    config_path = "gamecore/config-feedforward-3.txt"
-    run(config_path, game_3)
-
     # Start game_2
     generation = 0 # reset generation counter
-    level_2 = create_level("Football", "game_level", bg_color=(120,184,51))
+    level_2 = create_level("Touch a player!", "game_level", bg_color=(255,255,255))
     config_path = "gamecore/config-feedforward-2.txt"
     run(config_path, game_2)
+
+    # Start game_3
+    generation = 0 # reset generation counter
+    level_3 = create_level("Football", "game_level", bg_color=(120,184,51))
+    config_path = "gamecore/config-feedforward-3.txt"
+    run(config_path, game_3)
 
     # Quit the program
     terminate()

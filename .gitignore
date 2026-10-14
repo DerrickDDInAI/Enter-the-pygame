@@ -127,10 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-assets/.DS_Store
-.gitignore
-assets/images/.DS_Store
-.DS_Store
 .vscode/settings.json
-gamecore/assets/.DS_Store
-gamecore/assets/images/.DS_Store
+
+# MacOs
+.DS_Store

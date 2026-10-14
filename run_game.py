@@ -7,8 +7,9 @@ Game to demonstrate how:
 # Import
 # =====================================================================
 
-import math
+
 # Import internal modules
+import math
 import random
 import sys
 from typing import Dict, List, Optional, Set, Tuple, TypedDict
